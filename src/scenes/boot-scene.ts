@@ -62,6 +62,30 @@ export class BootScene extends Phaser.Scene {
 
     // Source: Open Game Art
     this.load.image('man', 'assets/character.png');
+    this.load.image('crate', 'assets/obj_crate002.png');
+    this.load.image('enemy', 'assets/robot.svg');
+    this.load.image('rocket', 'assets/rocket.svg');
+
+    // this.load.spritesheet('enemy', 
+    // 'assets/jack_alpha.png',
+    // { frameWidth: 50, frameHeight: 30 }
+// );
+
+
+// this.anims.create({
+//   key: 'stand',
+//   frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 1 }),
+//   frameRate: 1,
+//   repeat: -1
+// });
+
+// this.anims.create({
+//   key: 'move',
+//   frames: this.anims.generateFrameNumbers('enemy', { start: 1, end: 1 }),
+//   frameRate: 1,
+//   repeat: -1
+// });
+
   }
 
 }
