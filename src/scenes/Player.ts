@@ -1,22 +1,29 @@
 import { Input, Physics, Math, Types } from 'phaser';
+const HALF_BOX_SIZE = 80; 
 export default class Player extends Physics.Arcade.Sprite {
     private speed: number = 0;
-    private measure: number;
+    private gridUnit: number;
     private hasInput: boolean;
     private cursorKeys: Types.Input.Keyboard.CursorKeys;
     public upBlocked: boolean = false;
     public downBlocked: boolean = false;
     public leftBlocked: boolean = false;
     public rightBlocked: boolean = false;
-    constructor(config, measure: number) {        
+    private xThreshold : number;
+    private yThreshold : number;
+    public pushedCrate: Physics.Arcade.Sprite;
+    public stopPushing: boolean = false;
+    public pace: number = 300;
+
+    constructor(config, gridUnit: number) {        
         super(config.scene, config.x, config.y, "man");
             
         config.scene.add.existing(this);        
-        config.scene.physics.add.existing(this)
-        
-        this.speed = measure * 500;
-        this.measure = measure;
-        this.setScale(this.measure * 2);
+        config.scene.physics.add.existing(this);
+
+        this.speed = gridUnit * this.pace;
+        this.gridUnit = gridUnit;
+        this.setScale(this.gridUnit * 2);
         this.setCollideWorldBounds(true);
         this.cursorKeys = config.scene.input.keyboard.createCursorKeys();
     }        
@@ -24,10 +31,97 @@ export default class Player extends Physics.Arcade.Sprite {
     public isMoving(){
         return this.hasInput;
     }
+    public crateCollider = (me: Player, crate: Phaser.Physics.Arcade.Sprite) => {    
+      if (this.pushedCrate) {
+        // this.pushedCrate.body.immovable = false;
+        this.pushedCrate.setAlpha(100);
+      }
+      this.pushedCrate = crate;
+      const relativeX = (crate.x / this.gridUnit - this.x / this.gridUnit) 
+      const relativeY = (crate.y / this.gridUnit - this.y / this.gridUnit ) 
+      
+      const edge = HALF_BOX_SIZE;
+      const factor = (this.pace / 100) * 2.5;
+      if(relativeY < edge && (relativeX < edge && relativeX > -edge) ){            
+         crate.y -= factor;      
+      }
+      else if (relativeY > edge && (relativeX < edge && relativeX > -edge)){        
+        crate.y += factor;      
+      }
+      
+      else if( relativeX > edge && (relativeY < edge && relativeY > -edge) ){        
+        crate.x += factor;
+      }
+
+      else if( relativeX < edge && (relativeY < edge && relativeY > -edge) ){        
+        crate.x -= factor;
+      }
+    }
+    public cratesOverlap = (e:Physics.Arcade.Sprite, e2: Physics.Arcade.Sprite) => {  
+        console.log(e, e2)
+        if (this.body.touching.none){
+          e.body.x += this.gridUnit;
+          e2.body.x -= this.gridUnit;
+          e.body.y += this.gridUnit;
+          e2.body.y -= this.gridUnit;
+        }
+        
+        if (this.body.touching.up && e === this.pushedCrate){        
+          this.upBlocked = true;
+          this.xThreshold = this.pushedCrate.x / this.gridUnit;
+          e.setAlpha(1,0,0,0);
+          // e2.setY(e2.y - 1);
+          // e.y = e2.getBottomCenter().y + HALF_BOX_SIZE; 
+          // this.y = e2.getBottomCenter().y + HALF_BOX_SIZE * 2 + (this.gridUnit * 9) ;
+          e.body.y += this.gridUnit * 10;
+          this.y += this.gridUnit * 10; 
+          
+        }  
+      if (this.body.touching.down && e === this.pushedCrate){        
+        e.setAlpha(0,1,0,0);
+        this.downBlocked = true;
+        this.xThreshold = this.pushedCrate.x / this.gridUnit;
+          e.body.y -= this.gridUnit * 10;
+          this.y -= this.gridUnit * 10
+        
+      }  
+      if (this.body.touching.right && e === this.pushedCrate){        
+        e.setAlpha(0,0,1,0);
+        this.rightBlocked= true;
+        this.yThreshold = this.pushedCrate.y / this.gridUnit;        
+          e.body.x -= this.gridUnit * 10;
+          this.x -= this.gridUnit * 10
+      }  
+      if (this.body.touching.left && e === this.pushedCrate){        
+        e.setAlpha(0,0,0,1);
+        this.leftBlocked = true;
+        this.yThreshold = this.pushedCrate.y / this.gridUnit;        
+        e.body.x += this.gridUnit * 10;
+          this.x += this.gridUnit * 10
+      
+      }
+    }
     public update() {
+        
+        // re-enable moving in a certain direction if passed a blockade
+        if (this.xThreshold - this.x / this.gridUnit > HALF_BOX_SIZE 
+          || this.xThreshold - this.x / this.gridUnit < -HALF_BOX_SIZE         
+          ) {
+          this.downBlocked = false;
+          this.upBlocked = false;
+          this.xThreshold = this.x;                
+          this.pushedCrate = null;
+        }
+        if (this.yThreshold - this.y / this.gridUnit > HALF_BOX_SIZE 
+          || this.yThreshold - this.y / this.gridUnit < -HALF_BOX_SIZE
+          ) {
+          this.leftBlocked = false;
+          this.rightBlocked = false;
+          this.yThreshold = this.x;                
+          this.pushedCrate = null;
+        }
         // Every frame, we create a new velocity for the sprite based on what keys the player is holding down.
         const velocity = new Phaser.Math.Vector2(0, 0);
-    
         if (this.cursorKeys.left.isDown && !this.leftBlocked) {
           velocity.x -= 1;
           this.hasInput= true;
@@ -47,7 +141,7 @@ export default class Player extends Physics.Arcade.Sprite {
           velocity.y += 1;
           this.hasInput = true;
           this.upBlocked = false;
-        }    
+        }          
     
         // We normalize the velocity so that the player is always moving at the same speed, regardless of direction.
         const normalizedVelocity = velocity.normalize();
