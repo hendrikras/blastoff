@@ -5,15 +5,14 @@ export default class Player extends Physics.Arcade.Sprite {
     private gridUnit: number;
     private hasInput: boolean;
     private cursorKeys: Types.Input.Keyboard.CursorKeys;
-    public upBlocked: boolean = false;
-    public downBlocked: boolean = false;
-    public leftBlocked: boolean = false;
-    public rightBlocked: boolean = false;
+    private upBlocked: boolean = false;
+    private downBlocked: boolean = false;
+    private leftBlocked: boolean = false;
+    private rightBlocked: boolean = false;
     private xThreshold : number;
     private yThreshold : number;
-    public pushedCrate: Physics.Arcade.Sprite;
-    public stopPushing: boolean = false;
-    public pace: number = 300;
+    private pushedCrate: Physics.Arcade.Sprite;
+    private pace: number = 300;
 
     constructor(config, gridUnit: number) {        
         super(config.scene, config.x, config.y, "man");
@@ -34,7 +33,7 @@ export default class Player extends Physics.Arcade.Sprite {
     public crateCollider = (me: Player, crate: Phaser.Physics.Arcade.Sprite) => {    
       if (this.pushedCrate) {
         // this.pushedCrate.body.immovable = false;
-        this.pushedCrate.setAlpha(100);
+        // this.pushedCrate.setAlpha(100);
       }
       this.pushedCrate = crate;
       const relativeX = (crate.x / this.gridUnit - this.x / this.gridUnit) 
@@ -58,7 +57,7 @@ export default class Player extends Physics.Arcade.Sprite {
       }
     }
     public cratesOverlap = (e:Physics.Arcade.Sprite, e2: Physics.Arcade.Sprite) => {  
-        console.log(e, e2)
+        // // console.log(e, e2)
         if (this.body.touching.none){
           e.body.x += this.gridUnit;
           e2.body.x -= this.gridUnit;
@@ -70,9 +69,7 @@ export default class Player extends Physics.Arcade.Sprite {
           this.upBlocked = true;
           this.xThreshold = this.pushedCrate.x / this.gridUnit;
           e.setAlpha(1,0,0,0);
-          // e2.setY(e2.y - 1);
-          // e.y = e2.getBottomCenter().y + HALF_BOX_SIZE; 
-          // this.y = e2.getBottomCenter().y + HALF_BOX_SIZE * 2 + (this.gridUnit * 9) ;
+
           e.body.y += this.gridUnit * 10;
           this.y += this.gridUnit * 10; 
           
