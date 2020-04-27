@@ -88,69 +88,35 @@ export class GameScene extends Phaser.Scene {
     
     this.player = new Player({scene:this,x:getGameWidth(this) / 2, y: getGameHeight(this) / 2}, this.gridUnit);
     this.enemy = new Enemy({scene:this,x:getGameWidth(this) / 2,y:100}, this.gridUnit);
-        
-  
-    // this.physics.add.collider(this.crates, this.crates);
-    // this.playerCollider = this.physics.add.collider(this.player, this.crates);
-    
+            
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
 
 
     this.crates.children.iterate(crate => crate.body['onWorldBounds'] = true) 
-    this.physics.world.on('worldbounds', function(body){
-      console.log('hello from the edge of the world', body);
-    },this);
+    this.physics.world.on('worldbounds', function({gameObject: crate}){
+      if (this.body.touching.down){
+        this.downBlocked = true;
+        this.y -= this.gridUnit * 5;
+        this.xThreshold = crate.x / this.gridUnit;
+      }
+      if (this.body.touching.up){
+        this.upBlocked = true;
+        this.y += this.gridUnit * 5;
+        this.xThreshold = crate.x / this.gridUnit;
+      }
+      if (this.body.touching.left){
+        this.leftBlocked = true;
+        this.x += this.gridUnit * 5;
+        this.yThreshold = crate.y / this.gridUnit;
+      }
+      if (this.body.touching.right){
+        this.rightBlocked = true;
+        this.x -= this.gridUnit * 5;
+        this.yThreshold = crate.y / this.gridUnit;
+      }
+    },this.player);
     
-    
-    // const cratesOverlap = (e:Physics.Arcade.Sprite, e2: Physics.Arcade.Sprite) => {  
-    //   this.player.stopPushing = true;
-    //   const velocity = this.gridUnit * 200;
-    //   // e.setVelocity(velocity);
-    //   // e2.setVelocity(-velocity);
-      
-    //   // e.body.immovable = true;
-    //   // e2.setVelocity(0);
-    //   // e.body.immovable = false;
-    //   // e2.body.immovable = false;
-    //   // e.enableBody(false, e.x, e.y, true, e as any);
-    //   // e2.disableBody(true);
-    //   // e.body.is
-    //   // e2.setVelocity(-this.gridUnit * 150);
-      
-    //   if (this.player.body.touching.down && e === this.player.pushedCrate){
-    //     // debugger;
-    //     e.body.immovable = true;
-    //     // this.player.pushedCrate.setVelocityY(e2.body.velocity.y);
-    //     e.setAlpha(1,0,0,0);
-
-    //     // // e.body.immovable = true;
-    //     // e.setVelocity(0);
-    //     this.player.setY(e.y - 90);
-    //     // e.setY(this.player.body.y + 120);
-    //     // e.body.immovable = false;  
-    //     // e2.setVelocityY(velocity);
-    //     // e.body.immovable = true;
-    //     // e2.setVelocityY(-this.gridUnit * 120);
-    //   }
-      // if (e2.body.touching.down && e.body.touching.up){
-      //   e.setVelocityY(velocity);
-      //   e2.setVelocityY(-velocity);
-      //   // e2.setVelocityY(this.gridUnit * 120)        
-      // }
-      // if (e2.body.touching.left && e.body.touching.right){
-      //   // this.player.leftBlocked = true;
-      //   e.setVelocityX(50);
-      //   // e2.setVelocityX(-this.gridUnit * 120)        
-      // }
-      // if (e2.body.touching.right && e.body.touching.right){
-      //   // this.player.rightBlocked = true;
-      //   e.setVelocity(-50);
-      //   // e2.setVelocityX(this.gridUnit * 120)        
-      // }
-      // e2.body.immovable = false;
-      
-    // };
     this.enemyCratesCollider = this.physics.add.overlap(this.crates, this.crates, this.player.cratesOverlap);
 
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
@@ -159,7 +125,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   public update() {
-    // Every frame, we create a new velocity for the sprite based on what keys the player is holding down.
     
     if (this.player.isMoving() && !this.enemy.isCollidingCrate()) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
