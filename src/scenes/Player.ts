@@ -1,5 +1,6 @@
 import { Input, Physics, Math, Types } from 'phaser';
-const HALF_BOX_SIZE = 80; 
+import { MINIMUM_DISTANCE, HALF_BOX_SIZE} from '../constants';
+
 export default class Player extends Physics.Arcade.Sprite {
     private speed: number = 0;
     private gridUnit: number;
@@ -12,7 +13,7 @@ export default class Player extends Physics.Arcade.Sprite {
     private xThreshold : number;
     private yThreshold : number;
     private pushedCrate: Physics.Arcade.Sprite;
-    private pace: number = 300;
+    private pace: number = 30;
 
     constructor(config, gridUnit: number) {        
         super(config.scene, config.x, config.y, "man");
@@ -21,7 +22,7 @@ export default class Player extends Physics.Arcade.Sprite {
         config.scene.physics.add.existing(this);
 
         this.speed = gridUnit * this.pace;
-        this.gridUnit = gridUnit;
+        this.gridUnit = gridUnit / 10;
         this.setScale(this.gridUnit * 2);
         this.setCollideWorldBounds(true);
         this.cursorKeys = config.scene.input.keyboard.createCursorKeys();
@@ -31,6 +32,7 @@ export default class Player extends Physics.Arcade.Sprite {
         return this.hasInput;
     }
     public crateCollider = (me: Player, crate: Phaser.Physics.Arcade.Sprite) => {    
+      if ((crate as any).enemyTouching) console.log('touching')
       if (this.pushedCrate) {
         // this.pushedCrate.body.immovable = false;
         // this.pushedCrate.setAlpha(100);
@@ -40,7 +42,7 @@ export default class Player extends Physics.Arcade.Sprite {
       const relativeY = (crate.y / this.gridUnit - this.y / this.gridUnit ) 
       
       const edge = HALF_BOX_SIZE;
-      const factor = (this.pace / 100) * 2.5;
+      const factor = (this.pace / 10) * 2.5;
       if(relativeY < edge && (relativeX < edge && relativeX > -edge) ){            
          crate.y -= factor;      
       }
@@ -70,31 +72,32 @@ export default class Player extends Physics.Arcade.Sprite {
           this.xThreshold = this.pushedCrate.x / this.gridUnit;
           e.setAlpha(1,0,0,0);
 
-          e.body.y += this.gridUnit * 10;
-          this.y += this.gridUnit * 10; 
+          e.body.y += MINIMUM_DISTANCE;
+          this.y += MINIMUM_DISTANCE; 
           
         }  
       if (this.body.touching.down && e === this.pushedCrate){        
         e.setAlpha(0,1,0,0);
         this.downBlocked = true;
         this.xThreshold = this.pushedCrate.x / this.gridUnit;
-          e.body.y -= this.gridUnit * 10;
-          this.y -= this.gridUnit * 10
+        console.log 
+          e.body.y -= MINIMUM_DISTANCE;
+          this.y -= MINIMUM_DISTANCE
         
       }  
       if (this.body.touching.right && e === this.pushedCrate){        
         e.setAlpha(0,0,1,0);
         this.rightBlocked= true;
         this.yThreshold = this.pushedCrate.y / this.gridUnit;        
-          e.body.x -= this.gridUnit * 10;
-          this.x -= this.gridUnit * 10
+          e.body.x -= MINIMUM_DISTANCE;
+          this.x -= MINIMUM_DISTANCE
       }  
       if (this.body.touching.left && e === this.pushedCrate){        
         e.setAlpha(0,0,0,1);
         this.leftBlocked = true;
         this.yThreshold = this.pushedCrate.y / this.gridUnit;        
-        e.body.x += this.gridUnit * 10;
-          this.x += this.gridUnit * 10
+        e.body.x += MINIMUM_DISTANCE;
+          this.x += MINIMUM_DISTANCE
       
       }
     }

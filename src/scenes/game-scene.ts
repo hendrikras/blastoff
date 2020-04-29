@@ -1,9 +1,10 @@
 import { Input, GameObjects, Physics } from 'phaser';
+
 import Enemy from './Enemy';
 import Player from './Player';
 import { getGameWidth, getGameHeight } from '../helpers';
 
-
+const gutterSpace = 5;
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -23,12 +24,13 @@ export class GameScene extends Phaser.Scene {
   private playerCollider: Phaser.Physics.Arcade.Collider;
   private enemyCollider: Phaser.Physics.Arcade.Collider;
   private enemyCratesCollider: Phaser.Physics.Arcade.Collider; 
+  private graphics: any;
 
   constructor() {
     super(sceneConfig);
   }
   private endGame(won: boolean = false) {
-    this.add.text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'you win' :'game over').setFontSize(this.gridUnit * 50);
+    this.add.text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'you win' :'game over').setFontSize(this.gridUnit * 5);
     this.physics.pause();
 
     this.player.setTint(0xff0000);
@@ -59,24 +61,35 @@ export class GameScene extends Phaser.Scene {
 
   }
 
-  public create() {
-
-    
+  public create() {    
     const measureX = getGameWidth(this); 
     const measureY = getGameHeight(this);
-    const measure = measureX > measureY ? measureY : measureX;
-    this.gridUnit = measure / 1000;
+    this.graphics = this.add.graphics();
+
+    var thickness = 2;
+    var color = 0xff0000;
+    var alpha = 1;
+
+    this.graphics.lineStyle(thickness, color, alpha);
+    
+    const landscape: boolean = measureX > measureY;
+    const measureShort: number = landscape ? measureY : measureX;
+    const measureLong: number = measureShort * 1.3;
+    const getSize = (input: boolean) => input ? measureLong : measureShort;
+    this.graphics.strokeRect(0, 0, getSize(landscape), getSize(!landscape));
+    this.gridUnit = Math.round(measureShort / 100);
+    console.log(4, this.gridUnit)
     // create the biggest square world that will fit on this screen.
-    const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, measure, measure); 
+    const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, getSize(landscape), getSize(!landscape)); 
     setBounds(this.physics.world);
 
     
     this.crates = this.physics.add.group({
       key: 'crate',
       repeat: 9,
-      setXY: { x: 100, y:100,  stepY: this.gridUnit*100 },      
+      setXY: { x: 100, y:100,  stepY: this.gridUnit*10 },      
       collideWorldBounds: true,    
-      setScale: { x: this.gridUnit, y: this.gridUnit},
+      setScale: { x: this.gridUnit /10, y: this.gridUnit /10},
       // bounceX: 1,
       // bounceY: 1,
       dragX: 2000,
@@ -84,7 +97,10 @@ export class GameScene extends Phaser.Scene {
   });
     
     this.crates.world.setBoundsCollision();
-    this.crates.children.iterate((crate: Physics.Arcade.Sprite)=> crate.setX(Phaser.Math.Between(0, getGameWidth(this))));
+    this.crates.children.iterate((crate: Physics.Arcade.Sprite)=> {
+      crate.setX(Phaser.Math.Between(0, getGameWidth(this)));
+      (crate as any).enemyColision = false;      
+    });
     
     this.player = new Player({scene:this,x:getGameWidth(this) / 2, y: getGameHeight(this) / 2}, this.gridUnit);
     this.enemy = new Enemy({scene:this,x:getGameWidth(this) / 2,y:100}, this.gridUnit);
@@ -95,27 +111,41 @@ export class GameScene extends Phaser.Scene {
 
     this.crates.children.iterate(crate => crate.body['onWorldBounds'] = true) 
     this.physics.world.on('worldbounds', function({gameObject: crate}){
-      if (this.body.touching.down){
-        this.downBlocked = true;
-        this.y -= this.gridUnit * 5;
-        this.xThreshold = crate.x / this.gridUnit;
-      }
-      if (this.body.touching.up){
-        this.upBlocked = true;
-        this.y += this.gridUnit * 5;
-        this.xThreshold = crate.x / this.gridUnit;
-      }
-      if (this.body.touching.left){
-        this.leftBlocked = true;
-        this.x += this.gridUnit * 5;
-        this.yThreshold = crate.y / this.gridUnit;
-      }
-      if (this.body.touching.right){
-        this.rightBlocked = true;
-        this.x -= this.gridUnit * 5;
-        this.yThreshold = crate.y / this.gridUnit;
+
+      if (crate !== this.scene.enemy){
+        if (this.body.touching.down){
+          this.downBlocked = true;
+          this.y -= gutterSpace;
+          this.xThreshold = crate.x / this.gridUnit;
+        }
+        if (this.body.touching.up){
+          this.upBlocked = true;
+          this.y += gutterSpace;
+          this.xThreshold = crate.x / this.gridUnit;
+        }
+        if (this.body.touching.left){
+          this.leftBlocked = true;
+          this.x += gutterSpace;
+          this.yThreshold = crate.y / this.gridUnit;
+        }
+        if (this.body.touching.right){
+          this.rightBlocked = true;
+          this.x -= gutterSpace;
+          this.yThreshold = crate.y / this.gridUnit;
+        }
       }
     },this.player);
+
+    (this as any).enemy.body['onWorldBounds'] = true;
+
+    this.physics.world.on('worldbounds', function({gameObject: enemy}){
+      if (enemy === this){
+        this.chasePlayer = true;
+      } 
+    },this.enemy);
+
+    
+
     
     this.enemyCratesCollider = this.physics.add.overlap(this.crates, this.crates, this.player.cratesOverlap);
 
