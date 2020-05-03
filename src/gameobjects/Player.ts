@@ -1,5 +1,8 @@
 import { Input, Physics, Math, Types } from 'phaser';
+import { collidesOnAxes, impassable } from '../helpers';
 import { MINIMUM_DISTANCE, HALF_BOX_SIZE} from '../constants';
+import Crate from './Crate';
+import Enemy from './Enemy';
 
 export default class Player extends Physics.Arcade.Sprite {
     private speed: number = 0;
@@ -12,15 +15,16 @@ export default class Player extends Physics.Arcade.Sprite {
     private rightBlocked: boolean = false;
     private xThreshold : number;
     private yThreshold : number;
-    private pushedCrate: Physics.Arcade.Sprite;
+    private pushedCrate: Crate;
     private pace: number = 30;
+    private crates: Crate[];
 
-    constructor(config, gridUnit: number) {        
+    constructor(config, gridUnit: number, crates: Physics.Arcade.Group) {        
         super(config.scene, config.x, config.y, "man");
             
         config.scene.add.existing(this);        
         config.scene.physics.add.existing(this);
-
+        this.crates = crates.children.getArray() as Crate[];
         this.speed = gridUnit * this.pace;
         this.gridUnit = gridUnit / 10;
         this.setScale(this.gridUnit * 2);
@@ -31,75 +35,77 @@ export default class Player extends Physics.Arcade.Sprite {
     public isMoving(){
         return this.hasInput;
     }
-    public crateCollider = (me: Player, crate: Phaser.Physics.Arcade.Sprite) => {    
-      if ((crate as any).enemyTouching) console.log('touching')
-      if (this.pushedCrate) {
-        // this.pushedCrate.body.immovable = false;
-        // this.pushedCrate.setAlpha(100);
-      }
+    public crateCollider = (me: Player, crate: Crate) => {
+          
       this.pushedCrate = crate;
+      if (!crate.player){
+        crate.player = true;
+      }
       const relativeX = (crate.x / this.gridUnit - this.x / this.gridUnit) 
       const relativeY = (crate.y / this.gridUnit - this.y / this.gridUnit ) 
       
-      const edge = HALF_BOX_SIZE;
+      const edge = crate.body.height / 2;
       const factor = (this.pace / 10) * 2.5;
-      if(relativeY < edge && (relativeX < edge && relativeX > -edge) ){            
-         crate.y -= factor;      
+
+      console.log(relativeY, edge);
+      if(relativeY < edge && (relativeX < edge && relativeX > -edge) ){                    
+        const up = true;
+        const direction = { up }
+        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any)).pop();
+            
+         if (impassable(crate, selection, factor, direction as any)){
+          this.upBlocked = true;
+          return this.xThreshold = crate.x / this.gridUnit;                  
+         } else {
+          crate.y -= factor;
+         }
+         
       }
       else if (relativeY > edge && (relativeX < edge && relativeX > -edge)){        
-        crate.y += factor;      
+        const down = true;
+        const direction = { down }
+        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any))[0];
+            
+         if (impassable(crate, selection, factor, direction as any)){
+          this.downBlocked = true;
+          return this.xThreshold = crate.x / this.gridUnit;                  
+         } else {
+          crate.y += factor;
+         }  
       }
       
       else if( relativeX > edge && (relativeY < edge && relativeY > -edge) ){        
-        crate.x += factor;
+        const right = true;
+        const direction = { right }
+        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any))[0];
+            
+         if (impassable(crate, selection, factor, direction as any)){
+          this.rightBlocked = true;
+          return this.yThreshold = crate.y / this.gridUnit;                  
+         } else {
+          crate.x += factor;
+         }  
       }
 
       else if( relativeX < edge && (relativeY < edge && relativeY > -edge) ){        
-        crate.x -= factor;
+        const left = true;
+        const direction = { left }
+        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any)).pop();
+            
+         if (impassable(crate, selection, factor, direction as any)){
+          this.leftBlocked = true;
+          return this.yThreshold = crate.y / this.gridUnit;                  
+         } else {
+          crate.x -= factor;
+         }  
       }
     }
-    public cratesOverlap = (e:Physics.Arcade.Sprite, e2: Physics.Arcade.Sprite) => {  
-        // // console.log(e, e2)
-        if (this.body.touching.none){
-          e.body.x += this.gridUnit;
-          e2.body.x -= this.gridUnit;
-          e.body.y += this.gridUnit;
-          e2.body.y -= this.gridUnit;
-        }
-        
-        if (this.body.touching.up && e === this.pushedCrate){        
-          this.upBlocked = true;
-          this.xThreshold = this.pushedCrate.x / this.gridUnit;
-          e.setAlpha(1,0,0,0);
-
-          e.body.y += MINIMUM_DISTANCE;
-          this.y += MINIMUM_DISTANCE; 
-          
-        }  
-      if (this.body.touching.down && e === this.pushedCrate){        
-        e.setAlpha(0,1,0,0);
-        this.downBlocked = true;
-        this.xThreshold = this.pushedCrate.x / this.gridUnit;
-        console.log 
-          e.body.y -= MINIMUM_DISTANCE;
-          this.y -= MINIMUM_DISTANCE
-        
-      }  
-      if (this.body.touching.right && e === this.pushedCrate){        
-        e.setAlpha(0,0,1,0);
-        this.rightBlocked= true;
-        this.yThreshold = this.pushedCrate.y / this.gridUnit;        
-          e.body.x -= MINIMUM_DISTANCE;
-          this.x -= MINIMUM_DISTANCE
-      }  
-      if (this.body.touching.left && e === this.pushedCrate){        
-        e.setAlpha(0,0,0,1);
-        this.leftBlocked = true;
-        this.yThreshold = this.pushedCrate.y / this.gridUnit;        
-        e.body.x += MINIMUM_DISTANCE;
-          this.x += MINIMUM_DISTANCE
-      
-      }
+    
+    public resetPlayerOnCrate(){
+      if (this.pushedCrate && this.pushedCrate.player){
+        this.pushedCrate.player = false;                
+      } 
+      this.pushedCrate = null;
     }
     public update() {
         
@@ -109,16 +115,16 @@ export default class Player extends Physics.Arcade.Sprite {
           ) {
           this.downBlocked = false;
           this.upBlocked = false;
-          this.xThreshold = this.x;                
-          this.pushedCrate = null;
+          this.xThreshold = this.x;
+          this.resetPlayerOnCrate();
         }
         if (this.yThreshold - this.y / this.gridUnit > HALF_BOX_SIZE 
           || this.yThreshold - this.y / this.gridUnit < -HALF_BOX_SIZE
           ) {
           this.leftBlocked = false;
           this.rightBlocked = false;
-          this.yThreshold = this.x;                
-          this.pushedCrate = null;
+          this.yThreshold = this.y;
+          this.resetPlayerOnCrate();
         }
         // Every frame, we create a new velocity for the sprite based on what keys the player is holding down.
         const velocity = new Phaser.Math.Vector2(0, 0);
