@@ -1,7 +1,8 @@
 import { Input, GameObjects, Physics } from 'phaser';
 
-import Enemy from './Enemy';
-import Player from './Player';
+import Crate from '../gameobjects/Crate';
+import Enemy from '../gameobjects/Enemy';
+import Player from '../gameobjects/Player';
 import { getGameWidth, getGameHeight } from '../helpers';
 
 const gutterSpace = 5;
@@ -28,6 +29,7 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super(sceneConfig);
+    this.crates;
   }
   private endGame(won: boolean = false) {
     this.add.text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'you win' :'game over').setFontSize(this.gridUnit * 5);
@@ -83,27 +85,25 @@ export class GameScene extends Phaser.Scene {
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, getSize(landscape), getSize(!landscape)); 
     setBounds(this.physics.world);
 
-    
-    this.crates = this.physics.add.group({
-      key: 'crate',
+    const crateConfig = {
+			classType: Crate, // This is the class we created
+			active: true,
+      visible: true,
       repeat: 9,
-      setXY: { x: 100, y:100,  stepY: this.gridUnit*10 },      
-      collideWorldBounds: true,    
       setScale: { x: this.gridUnit /10, y: this.gridUnit /10},
-      // bounceX: 1,
-      // bounceY: 1,
-      dragX: 2000,
-      dragY: 2000,
-  });
+      setXY: { x: 500, y:100,  stepY: this.gridUnit*10 },      
+      collideWorldBounds: true,
+			key: 'crate'
+    }
+    this.crates = new Physics.Arcade.Group(this.physics.world, this, crateConfig);
     
-    this.crates.world.setBoundsCollision();
-    this.crates.children.iterate((crate: Physics.Arcade.Sprite)=> {
-      crate.setX(Phaser.Math.Between(0, getGameWidth(this)));
-      (crate as any).enemyColision = false;      
+    this.crates.children.iterate((crate: Crate, itx)=> {    
+      crate.name = itx.toString(); 
+      crate.setX(Phaser.Math.Between(0, measureLong));      
     });
     
-    this.player = new Player({scene:this,x:getGameWidth(this) / 2, y: getGameHeight(this) / 2}, this.gridUnit);
-    this.enemy = new Enemy({scene:this,x:getGameWidth(this) / 2,y:100}, this.gridUnit);
+    this.player = new Player({scene:this,x:measureLong / 2, y: measureShort / 2}, this.gridUnit, this.crates);
+    this.enemy = new Enemy({scene:this,x:measureLong / 2,y:100}, this.gridUnit);
             
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
@@ -147,7 +147,7 @@ export class GameScene extends Phaser.Scene {
     
 
     
-    this.enemyCratesCollider = this.physics.add.overlap(this.crates, this.crates, this.player.cratesOverlap);
+    // this.enemyCratesCollider = this.physics.add.overlap(this.crates, this.crates, this.player.cratesOverlap);
 
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
   
@@ -156,7 +156,7 @@ export class GameScene extends Phaser.Scene {
 
   public update() {
     
-    if (this.player.isMoving() && !this.enemy.isCollidingCrate()) {
+    if (this.player.isMoving() && this.enemy.body.touching.none) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
       this.enemy.exterminate(pos);
     }
@@ -166,9 +166,6 @@ export class GameScene extends Phaser.Scene {
     }
     this.player.update();
     this.enemy.update();
-    if (this.player.body.touching.none){
-      // this.player.upBlocked = false;
-    }
     
   }
 }

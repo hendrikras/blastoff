@@ -1,9 +1,10 @@
 import { Input, Physics, Math as PMath, Types } from 'phaser';
+import { MINIMUM_DISTANCE, HALF_BOX_SIZE} from '../constants';
+import Crate from './Crate';
 export default class Enemy extends Physics.Arcade.Sprite {
     private speed: number = 0;
     private gridUnit: number;
-    private blockY: number = 1;
-    private blockX: number = 1;
+    private playersCrate: Crate;
     private chasePlayer: boolean = true;
     constructor(config, gridUnit: number) {        
         super(config.scene, config.x, config.y, "enemy");
@@ -28,23 +29,16 @@ export default class Enemy extends Physics.Arcade.Sprite {
       public isCollidingCrate(){
           return this.body.touching.down || this.body.touching.up || this.body.touching.right || this.body.touching.left  ;
       }
-      public cratesOverlap = (me:Enemy, crate: Physics.Arcade.Sprite) => {       
-        // console.log('én', me, this);     
-        // if (me === this) {
-            // me.setVelocity(0);
-            // this.speed = 0;
-            // crate.setVelocity(crate.body.touching.up || crate.body.touching.left ? 500 : -500);
-        // }  
+      public cratesOverlap = (me:Enemy, crate: Crate) => {       
         
           this.setVelocity(0);
-        //   this.speed = 0;
-        this.chasePlayer = !this.chasePlayer;
+
         if (me === this){            
-            // const {touching} = crate.body;
-            (crate as any).enemyTouching = true;
+            crate.enemy = me;
+            this.playersCrate = crate;
             if( crate.body.touching.up ){                                                 
-                    this.setVelocityY(-this.speed);
-                    (crate as any).enemyTouching = false;
+                    // this.y -= MINIMUM_DISTANCE;
+                    // (crate as any).enemyTouching = false;
 
             }            
             if( crate.body.touching.down ){                                 
@@ -62,6 +56,10 @@ export default class Enemy extends Physics.Arcade.Sprite {
       };
 
       public update(){
+        if (this.playersCrate && (this.x -this.playersCrate.body.x > HALF_BOX_SIZE * this.gridUnit  || this.y - this.playersCrate.body.y > HALF_BOX_SIZE * this.gridUnit)  ){
+          console.log(this.x -this.playersCrate.body.x, this.y -this.playersCrate.body.y);
+          this.playersCrate.enemy = null;
+        }
           const {x, y} = this.body.velocity;
           this.flipX = false;
           if (y > 0){
