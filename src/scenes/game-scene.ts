@@ -40,7 +40,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private blastOff(){
-    const gravity = this.gridUnit * 29999;
+    const gravity = this.gridUnit * 3000;
     this.crates.setVelocityY(this.gridUnit * 100);
       this.player.setGravityY(gravity);
       this.enemy.setGravityY(gravity);
@@ -52,6 +52,7 @@ export class GameScene extends Phaser.Scene {
       this.physics.world.colliders.remove(this.playerCollider);
       this.physics.world.colliders.remove(this.enemyCratesCollider);
       this.physics.world.addCollider(this.crates, this.enemy);
+      this.physics.world.addCollider(this.crates, this.crates);
       
       this.physics.add.overlap(this.crates, this.enemy, () => { 
         console.log(this.enemy.getBottomCenter().y, this.physics.world.bounds.bottom);
@@ -81,7 +82,7 @@ export class GameScene extends Phaser.Scene {
     this.graphics.strokeRect(0, 0, getSize(landscape), getSize(!landscape));
     this.gridUnit = Math.round(measureShort / 100);
     console.log(4, this.gridUnit)
-    // create the biggest square world that will fit on this screen.
+    // create the biggest world that will fit on this screen.
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, getSize(landscape), getSize(!landscape)); 
     setBounds(this.physics.world);
 
@@ -106,7 +107,7 @@ export class GameScene extends Phaser.Scene {
     this.enemy = new Enemy({scene:this,x:measureLong / 2,y:100}, this.gridUnit);
             
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
-    this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
+    
 
 
     this.crates.children.iterate(crate => crate.body['onWorldBounds'] = true) 

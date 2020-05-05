@@ -28,6 +28,9 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Phaser.Type
   );
 };
 export const impassable = (crate: Crate, otherCrate:Crate, factor: number, direction: Phaser.Types.Physics.Arcade.ArcadeBodyCollision): boolean => {  
+  if (crate.enemy){
+    return true;
+  }
   if (otherCrate){
     const halfSize = crate.body.height / 2;      
     const axis = direction.up || direction.down ? 'y' : 'x';    
@@ -40,3 +43,5 @@ export const impassable = (crate: Crate, otherCrate:Crate, factor: number, direc
   }
   return false;
  };
+
+  
