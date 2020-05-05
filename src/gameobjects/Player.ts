@@ -18,6 +18,7 @@ export default class Player extends Physics.Arcade.Sprite {
     private pushedCrate: Crate;
     private pace: number = 30;
     private crates: Crate[];
+    private factor: number = (this.pace / 10) * 2.5;
 
     constructor(config, gridUnit: number, crates: Physics.Arcade.Group) {        
         super(config.scene, config.x, config.y, "man");
@@ -35,6 +36,31 @@ export default class Player extends Physics.Arcade.Sprite {
     public isMoving(){
         return this.hasInput;
     }
+    private pushCrate(direction: string, crate:Crate){
+      const up = direction === 'up';
+      const down = direction === 'down';
+      const right = direction === 'right';
+      const left = direction === 'left';
+      const none = false;
+
+      const collision: Types.Physics.Arcade.ArcadeBodyCollision= { up, down, right, left, none };
+      console.log(collision)
+      const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, collision));
+      const collidingCrate = up || left ? selection.pop() : selection[0]; 
+      console.log(111, selection);    
+      if (impassable(crate, collidingCrate, this.factor, collision)){
+      
+        this.upBlocked = up;
+        this.downBlocked = down;
+        this.leftBlocked = left;
+        this.rightBlocked = right;
+        const opAxis = right || left ? 'y' : 'x';
+        this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;                  
+      } else {
+        const axis = up || down ? 'y' : 'x';
+        up || left ? crate[axis] -= this.factor : crate[axis] += this.factor;
+      }
+    }
     public crateCollider = (me: Player, crate: Crate) => {
           
       this.pushedCrate = crate;
@@ -45,59 +71,22 @@ export default class Player extends Physics.Arcade.Sprite {
       const relativeY = (crate.y / this.gridUnit - this.y / this.gridUnit ) 
       
       const edge = crate.body.height / 2;
-      const factor = (this.pace / 10) * 2.5;
+      
 
       console.log(relativeY, edge);
       if(relativeY < edge && (relativeX < edge && relativeX > -edge) ){                    
-        const up = true;
-        const direction = { up }
-        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any)).pop();
-            
-         if (impassable(crate, selection, factor, direction as any)){
-          this.upBlocked = true;
-          return this.xThreshold = crate.x / this.gridUnit;                  
-         } else {
-          crate.y -= factor;
-         }
-         
+        this.pushCrate('up', crate);         
       }
       else if (relativeY > edge && (relativeX < edge && relativeX > -edge)){        
-        const down = true;
-        const direction = { down }
-        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any))[0];
-            
-         if (impassable(crate, selection, factor, direction as any)){
-          this.downBlocked = true;
-          return this.xThreshold = crate.x / this.gridUnit;                  
-         } else {
-          crate.y += factor;
-         }  
+        this.pushCrate('down', crate);  
       }
       
       else if( relativeX > edge && (relativeY < edge && relativeY > -edge) ){        
-        const right = true;
-        const direction = { right }
-        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any))[0];
-            
-         if (impassable(crate, selection, factor, direction as any)){
-          this.rightBlocked = true;
-          return this.yThreshold = crate.y / this.gridUnit;                  
-         } else {
-          crate.x += factor;
-         }  
+        this.pushCrate('right', crate);  
       }
 
       else if( relativeX < edge && (relativeY < edge && relativeY > -edge) ){        
-        const left = true;
-        const direction = { left }
-        const selection = this.crates.filter((item:Crate) => collidesOnAxes(crate, item, direction as any)).pop();
-            
-         if (impassable(crate, selection, factor, direction as any)){
-          this.leftBlocked = true;
-          return this.yThreshold = crate.y / this.gridUnit;                  
-         } else {
-          crate.x -= factor;
-         }  
+        this.pushCrate('left', crate);
       }
     }
     
