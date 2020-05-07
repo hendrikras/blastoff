@@ -68,15 +68,14 @@ export class BootScene extends Phaser.Scene {
     this.anims.create({
       key: 'face',
       frames: [ { key: 'enemy', frame: 1 } ],
-      frameRate: -1
+      frameRate: -1,
   });
     this.load.image('rocket', 'assets/rocket.svg');
 
-    // this.load.spritesheet('enemy', 
+    // this.load.spritesheet('enemy',
     // 'assets/jack_alpha.png',
     // { frameWidth: 50, frameHeight: 30 }
 // );
-
 
 // this.anims.create({
 //   key: 'stand',

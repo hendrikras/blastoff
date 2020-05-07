@@ -19,29 +19,27 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Phaser.Type
   const leftCornerCrate = crate[axis] - halfSize;
   const rightCornerCrate = crate[axis] + halfSize;
   const upLeftCondition = item[opaxis] + halfSize <= crate[opaxis] - halfSize;
-  const downRightCondition =item[opaxis] - halfSize >= crate[opaxis] + halfSize;
-  return item !== crate 
+  const downRightCondition = item[opaxis] - halfSize >= crate[opaxis] + halfSize;
+  return item !== crate
   && (direction.up || direction.left ? upLeftCondition : downRightCondition)
   && (
-    (leftCornerItem <= rightCornerCrate && leftCornerItem >= leftCornerCrate ) 
+    (leftCornerItem <= rightCornerCrate && leftCornerItem >= leftCornerCrate )
     || (rightCornerItem <= rightCornerCrate && rightCornerItem >= leftCornerCrate )
   );
 };
-export const impassable = (crate: Crate, otherCrate:Crate, factor: number, direction: Phaser.Types.Physics.Arcade.ArcadeBodyCollision): boolean => {  
-  if (crate.enemy){
+export const impassable = (crate: Crate, otherCrate: Crate, factor: number, direction: Phaser.Types.Physics.Arcade.ArcadeBodyCollision): boolean => {
+  if (crate.enemy) {
     return true;
   }
-  if (otherCrate){
-    const halfSize = crate.body.height / 2;      
-    const axis = direction.up || direction.down ? 'y' : 'x';    
+  if (otherCrate) {
+    const halfSize = crate.body.height / 2;
+    const axis = direction.up || direction.down ? 'y' : 'x';
   // otherCrate.setAlpha(0,0,0,1);
-    const upLeftCondition = otherCrate[axis] +halfSize >= crate[axis] - halfSize - factor;
+    const upLeftCondition = otherCrate[axis] + halfSize >= crate[axis] - halfSize - factor;
     const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + factor;
-    if (direction.up || direction.left ? upLeftCondition: downRightCondition){      
+    if (direction.up || direction.left ? upLeftCondition : downRightCondition) {
       return true;
-    };
+    }
   }
   return false;
  };
-
-  
