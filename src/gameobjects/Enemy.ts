@@ -44,7 +44,7 @@ export default class Enemy extends CollidesWithObjects {
         const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? -1 : this.speed;
         const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? -1 : this.speed;
 
-        this.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
+        // this.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
         // }
 
       }
