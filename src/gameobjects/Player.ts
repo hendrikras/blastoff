@@ -85,15 +85,17 @@ export default class Player extends CollidesWithObjects {
       const left = direction === 'left';
       const none = false;
       const collision: Types.Physics.Arcade.ArcadeBodyCollision = { up, down, right, left, none };
-      const selection = this.crates.filter((item: Crate) => collidesOnAxes(crate, item, collision));
+      const axis = up || down ? 'y' : 'x';
+      const selection = this.crates.filter((item: Crate) => collidesOnAxes(crate, item, collision))
+          .sort((a: Crate, b: Crate) => a[axis] < b[axis] ? -1 : 1 );
       const collidingCrate = up || left ? selection.pop() : selection[0];
 
-      if (crate.enemy || impassable(crate, collidingCrate, this.factor, collision)) {
+      if (crate.enemy || impassable(crate, collidingCrate, this.factor, collision, this.scene.physics.world)) {
         this.blockedDirection = { up, down, right, left, none: false};
         const opAxis = right || left ? 'y' : 'x';
         this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
       } else {
-        const axis = up || down ? 'y' : 'x';
+
         up || left ? crate[axis] -= this.factor : crate[axis] += this.factor;
       }
     }

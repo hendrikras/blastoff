@@ -65,8 +65,7 @@ export class GameScene extends Phaser.Scene {
     };
     this.crates = new Physics.Arcade.Group(this.physics.world, this, crateConfig);
 
-    this.crates.children.iterate((crate: Crate, itx) => {
-      crate.name = itx.toString();
+    this.crates.children.iterate((crate: Crate) => {
       crate.setX(Phaser.Math.Between(0, measureLong));
     });
 
@@ -76,31 +75,6 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
 
     this.crates.children.iterate((crate: Crate) => (crate as any).body.onWorldBounds = true);
-    this.physics.world.on('worldbounds', function({gameObject: crate}) {
-
-      if (crate !== this.scene.enemy) {
-        if (this.body.touching.down) {
-          this.downBlocked = true;
-          this.y -= gutterSpace;
-          this.xThreshold = crate.x / this.gridUnit;
-        }
-        if (this.body.touching.up) {
-          this.upBlocked = true;
-          this.y += gutterSpace;
-          this.xThreshold = crate.x / this.gridUnit;
-        }
-        if (this.body.touching.left) {
-          this.leftBlocked = true;
-          this.x += gutterSpace;
-          this.yThreshold = crate.y / this.gridUnit;
-        }
-        if (this.body.touching.right) {
-          this.rightBlocked = true;
-          this.x -= gutterSpace;
-          this.yThreshold = crate.y / this.gridUnit;
-        }
-      }
-    }, this.player);
 
     (this as any).enemy.body.onWorldBounds = true;
 
@@ -109,8 +83,6 @@ export class GameScene extends Phaser.Scene {
         this.chasePlayer = true;
       }
     }, this.enemy);
-
-    // this.enemyCratesCollider = this.physics.add.overlap(this.crates, this.crates, this.player.cratesOverlap);
 
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
 

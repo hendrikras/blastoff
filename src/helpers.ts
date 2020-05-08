@@ -1,6 +1,7 @@
-import * as Phaser from 'phaser';
+import {Physics, Types} from 'phaser';
 import Crate from './gameobjects/Crate';
 
+type Direction = Types.Physics.Arcade.ArcadeBodyCollision;
 export const getGameWidth = (scene: Phaser.Scene) => {
     return scene.game.scale.width;
   };
@@ -8,7 +9,7 @@ export const getGameWidth = (scene: Phaser.Scene) => {
 export const getGameHeight = (scene: Phaser.Scene) => {
     return scene.game.scale.height;
   };
-export const collidesOnAxes = (crate: Crate, item: Crate, direction: Phaser.Types.Physics.Arcade.ArcadeBodyCollision): boolean => {
+export const collidesOnAxes = (crate: Crate, item: Crate, direction: Direction): boolean => {
   const axis = direction.up || direction.down ? 'x' : 'y';
   const opaxis = direction.up || direction.down ? 'y' : 'x';
   const halfSize = crate.body.height / 2;
@@ -27,19 +28,20 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Phaser.Type
     || (rightCornerItem <= rightCornerCrate && rightCornerItem >= leftCornerCrate )
   );
 };
-export const impassable = (crate: Crate, otherCrate: Crate, factor: number, direction: Phaser.Types.Physics.Arcade.ArcadeBodyCollision): boolean => {
+export const impassable = (crate: Crate, otherCrate: Crate, factor: number, direction: Direction, world: Physics.Arcade.World): boolean => {
   if (crate.enemy) {
     return true;
   }
+  const halfSize = crate.body.height / 2;
+  const axis = direction.up || direction.down ? 'y' : 'x';
+  const d2str = direction.left ? 'left' : direction.right ? 'right' : direction.up ? 'top' : direction.down ? 'bottom' : 'none';
   if (otherCrate) {
-    const halfSize = crate.body.height / 2;
-    const axis = direction.up || direction.down ? 'y' : 'x';
-  // otherCrate.setAlpha(0,0,0,1);
-    const upLeftCondition = otherCrate[axis] + halfSize >= crate[axis] - halfSize - factor;
-    const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + factor;
-    if (direction.up || direction.left ? upLeftCondition : downRightCondition) {
-      return true;
-    }
+      const upLeftCondition = otherCrate[axis] + halfSize >= crate[axis] - halfSize - factor;
+      const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + factor;
+      return direction.up || direction.left ? upLeftCondition : downRightCondition;
+  } else {
+    const upleft = world.bounds[d2str] >= crate[axis] - halfSize;
+    const downright = world.bounds[d2str] <= crate[axis] + halfSize;
+    return direction.up || direction.left ? upleft : downright;
   }
-  return false;
  };
