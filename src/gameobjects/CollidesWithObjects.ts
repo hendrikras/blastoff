@@ -2,6 +2,7 @@ import { Physics, Types } from 'phaser';
 import Crate from './Crate';
 export default class CollidesWithObjects extends Physics.Arcade.Sprite {
     protected distanceToBoxCorner: number;
+    protected pushedCrate: Crate;
     protected gridUnit: number;
     protected xThreshold: number;
     protected yThreshold: number;
@@ -27,16 +28,8 @@ export default class CollidesWithObjects extends Physics.Arcade.Sprite {
 
         if (relativeY < edge && (relativeX < edge && relativeX > -edge) ) {
             this.pushCrate('up', crate);
-
-            if (crate.enemy) {
-                crate.enemy.setBlockedDirection('down');
-            }
         } else if (relativeY > edge && (relativeX < edge && relativeX > -edge)) {
             this.pushCrate('down', crate);
-
-            if (crate.enemy) {
-                crate.enemy.setBlockedDirection('up');
-            }
         } else if ( relativeX > edge && (relativeY < edge && relativeY > -edge) ) {
             this.pushCrate('right', crate);
         } else if ( relativeX < edge && (relativeY < edge && relativeY > -edge) ) {

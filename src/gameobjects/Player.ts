@@ -31,7 +31,6 @@ export default class Player extends CollidesWithObjects {
     private speed;
     private hasInput: boolean;
     private cursorKeys: Types.Input.Keyboard.CursorKeys;
-    private pushedCrate: Crate;
     private pace: number = 30;
     private crates: Crate[];
     private factor: number = (this.pace / 10) * 2.5;

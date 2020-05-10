@@ -19,6 +19,7 @@ export class GameScene extends Phaser.Scene {
   private keySpace: Phaser.Input.Keyboard.Key;
   private player: Player;
   private enemy: Enemy;
+  private prison: Physics.Arcade.Sprite;
   private crates: Phaser.Physics.Arcade.Group;
   private playerCollider: Phaser.Physics.Arcade.Collider;
   private enemyCollider: Phaser.Physics.Arcade.Collider;
@@ -61,10 +62,15 @@ export class GameScene extends Phaser.Scene {
       key: 'crate',
     };
     this.crates = new Physics.Arcade.Group(this.physics.world, this, crateConfig);
+    this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
+    this.prison.setScale(this.gridUnit / 15);
+    this.prison.name = 'prison';
 
     this.crates.children.iterate((crate: Crate) => {
       crate.setX(Phaser.Math.Between(0, measureLong));
     });
+
+    this.crates.add(this.prison);
 
     this.player = new Player({scene: this, x: measureLong / 2, y: measureShort / 2}, this.gridUnit, this.crates);
     this.enemy = new Enemy({scene: this, x: measureLong / 2, y: 100}, this.gridUnit);
@@ -109,27 +115,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   private blastOff() {
-    const gravity = this.gridUnit * 3000;
-    this.crates.setVelocityY(this.gridUnit * 100);
+    const gravity = 25000;
     this.player.setGravityY(gravity);
     this.enemy.setGravityY(gravity);
 
     this.crates.children.iterate((crate: Phaser.Physics.Arcade.Sprite) => crate.setGravityY(gravity / 10));
     this.player.setVelocityY(0);
-      // this.enemy.setVelocityY(1000);
     this.physics.world.colliders.remove(this.enemyCollider);
-    this.physics.world.colliders.remove(this.playerCollider);
     this.physics.world.colliders.remove(this.enemyCratesCollider);
     this.physics.world.addCollider(this.crates, this.enemy);
     this.physics.world.addCollider(this.crates, this.crates);
 
-    this.physics.add.overlap(this.crates, this.enemy, () => {
-        console.log(this.enemy.getBottomCenter().y, this.physics.world.bounds.bottom);
-        if (this.enemy.getBottomCenter().y >= this.physics.world.bounds.bottom) {
-          this.enemy.setVisible(false);
-          this.endGame(true);
-        }
-      });
+    this.physics.add.overlap(this.prison, this.enemy, () => {
+        this.endGame(true);
+    });
 
   }
 }
