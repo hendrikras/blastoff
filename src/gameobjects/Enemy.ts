@@ -1,8 +1,11 @@
-import { Input, Physics, Math as PMath, Types } from 'phaser';
-import { MINIMUM_DISTANCE, HALF_BOX_SIZE} from '../constants';
+import { Math } from 'phaser';
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
-
+function pushCrate(direction: string, crate: Crate) {
+    this.setBlockedDirection(direction);
+    this.xThreshold = crate.x / this.gridUnit;
+    this.setVelocity(0);
+}
 export default class Enemy extends CollidesWithObjects {
     private readonly speed: number = 0;
     private playersCrate: Crate;
@@ -19,8 +22,9 @@ export default class Enemy extends CollidesWithObjects {
         this.setScale(this.gridUnit / 8);
         this.setCollideWorldBounds(true);
         this.setFrame(1);
-        this.xThreshold = this.x;
-        // this.toggleFlipY();
+        this.xThreshold = this.x / gridUnit;
+        this.yThreshold = this.y / gridUnit;
+        this.pushCrate = pushCrate;
     }
     public get chasePlayer() {
       return this.$chasePlayer;
@@ -31,58 +35,24 @@ export default class Enemy extends CollidesWithObjects {
     public setBlockedDirection(direction: string) {
       this.blockedDirection[direction] = true;
     }
-    public exterminate(player: PMath.Vector2) {
-        const enemyVelocity = new PMath.Vector2(player.x - this.x , player.y  - this.y).normalize();
-        // if (this.chasePlayer){
+    public exterminate(player: Math.Vector2) {
+        const enemyVelocity = new Math.Vector2(player.x - this.x , player.y  - this.y).normalize();
+        const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
+        const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
 
-        if (this.hasReachedCrateCorner('x')) {
-              this.blockedDirection.up = false;
-              this.blockedDirection.down = false;
-              this.xThreshold = this.x;
-            }
+        this.resetBlockedDirections();
 
-        const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? -1 : this.speed;
-        const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? -1 : this.speed;
-
-        // this.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
-        // }
+        this.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
 
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
         this.blockedDirection.none = false;
-
-        if (me === this) {
-            crate.enemy = me;
-            this.playersCrate = crate;
-            if (!crate.player) {
-              this.chasePlayer = !this.chasePlayer;
-              if ( crate.body.touching.up ) {
-                this.blockedDirection.down = true;
-                this.xThreshold = crate.x / this.gridUnit;
-            } else if ( crate.body.touching.down ) {
-                this.blockedDirection.up = true;
-                this.xThreshold = crate.x / this.gridUnit;
-             } else if ( crate.body.touching.left ) {
-              this.blockedDirection.left = true;
-              this.yThreshold = crate.y / this.gridUnit;
-             } else if ( crate.body.touching.left ) {
-                this.blockedDirection.right = true;
-
-             }
-            } else {
-              this.chasePlayer = false;
-              // this.setVelocity(0);
-            }
-
-        }
-
+        this.distanceToBoxCorner = crate.width;
+        crate.enemy = me;
+        this.handleCrateCollison(crate);
       }
 
       public update() {
-        // if (this.playersCrate && (this.x -this.playersCrate.body.x > HALF_BOX_SIZE * this.gridUnit  || this.y - this.playersCrate.body.y > HALF_BOX_SIZE * this.gridUnit)  ){
-        //   console.log(this.x -this.playersCrate.body.x, this.y -this.playersCrate.body.y);
-        //   this.playersCrate.enemy = null;
-        // }
           const {x, y} = this.body.velocity;
           this.flipX = false;
           if (y > 0) {
@@ -97,7 +67,6 @@ export default class Enemy extends CollidesWithObjects {
         }
           if (x < 0 && x > y) {
             this.setFrame(0);
-            // this.flipX = true;
         }
 
       }

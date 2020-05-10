@@ -5,8 +5,6 @@ import Enemy from '../gameobjects/Enemy';
 import Player from '../gameobjects/Player';
 import { getGameWidth, getGameHeight } from '../helpers';
 
-const gutterSpace = 5;
-
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
   visible: false,
@@ -48,7 +46,6 @@ export class GameScene extends Phaser.Scene {
     const getSize = (input: boolean) => input ? measureLong : measureShort;
     this.graphics.strokeRect(0, 0, getSize(landscape), getSize(!landscape));
     this.gridUnit = Math.round(measureShort / 100);
-    console.log(4, this.gridUnit);
     // create the biggest world that will fit on this screen.
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, getSize(landscape), getSize(!landscape));
     setBounds(this.physics.world);

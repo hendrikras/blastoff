@@ -1,8 +1,31 @@
-import { Input, Physics, Math, Types } from 'phaser';
+import { Physics, Types } from 'phaser';
 import { collidesOnAxes, impassable } from '../helpers';
 
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
+
+function pushCrate(direction: string, crate: Crate) {
+    this.setCollidedObject(crate);
+    const up = direction === 'up';
+    const down = direction === 'down';
+    const right = direction === 'right';
+    const left = direction === 'left';
+    const none = false;
+    const collision: Types.Physics.Arcade.ArcadeBodyCollision = { up, down, right, left, none };
+    const axis = up || down ? 'y' : 'x';
+    const selection = this.crates.filter((item: Crate) => collidesOnAxes(crate, item, collision))
+        .sort((a: Crate, b: Crate) => a[axis] < b[axis] ? -1 : 1 );
+    const collidingCrate = up || left ? selection.pop() : selection[0];
+
+    if (impassable(crate, collidingCrate, this.factor, collision, this.scene.physics.world)) {
+        this.blockedDirection = { up, down, right, left, none: false};
+        const opAxis = right || left ? 'y' : 'x';
+        this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
+    } else {
+
+        up || left ? crate[axis] -= this.factor : crate[axis] += this.factor;
+    }
+}
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -25,6 +48,7 @@ export default class Player extends CollidesWithObjects {
         this.setScale(this.gridUnit * 2);
         this.setCollideWorldBounds(true);
         this.cursorKeys = config.scene.input.keyboard.createCursorKeys();
+        this.pushCrate = pushCrate;
     }
 
     public isMoving() {
@@ -41,14 +65,7 @@ export default class Player extends CollidesWithObjects {
     }
     public update() {
       // re-enable moving in a certain direction if passed a blockade
-        ['x', 'y'].forEach((axis: string) => {
-          if (this.hasReachedCrateCorner(axis)) {
-            axis === 'x' ? this.blockedDirection.down = false : this.blockedDirection.right = false;
-            axis === 'x' ? this.blockedDirection.up = false : this.blockedDirection.left = false;
-            this[`${axis}Threshold`] = this[axis];
-            this.resetPlayerOnCrate();
-          }
-        });
+        this.resetBlockedDirections();
 
         // Every frame, we create a new velocity for the sprite based on what keys the player is holding down.
         const velocity = new Phaser.Math.Vector2(0, 0);
@@ -77,54 +94,12 @@ export default class Player extends CollidesWithObjects {
         const normalizedVelocity = velocity.normalize();
         this.setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
       }
-    private pushCrate(direction: string, crate: Crate) {
-      this.setCollidedObject(crate);
-      const up = direction === 'up';
-      const down = direction === 'down';
-      const right = direction === 'right';
-      const left = direction === 'left';
-      const none = false;
-      const collision: Types.Physics.Arcade.ArcadeBodyCollision = { up, down, right, left, none };
-      const axis = up || down ? 'y' : 'x';
-      const selection = this.crates.filter((item: Crate) => collidesOnAxes(crate, item, collision))
-          .sort((a: Crate, b: Crate) => a[axis] < b[axis] ? -1 : 1 );
-      const collidingCrate = up || left ? selection.pop() : selection[0];
-
-      if (crate.enemy || impassable(crate, collidingCrate, this.factor, collision, this.scene.physics.world)) {
-        this.blockedDirection = { up, down, right, left, none: false};
-        const opAxis = right || left ? 'y' : 'x';
-        this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
-      } else {
-
-        up || left ? crate[axis] -= this.factor : crate[axis] += this.factor;
-      }
-    }
     private crateCollider = (me: Player, crate: Crate) => {
 
       this.pushedCrate = crate;
       if (!crate.player) {
         crate.player = true;
       }
-      const relativeX = (crate.x / this.gridUnit - this.x / this.gridUnit);
-      const relativeY = (crate.y / this.gridUnit - this.y / this.gridUnit );
-      const edge = crate.body.height / 2;
-
-      if (relativeY < edge && (relativeX < edge && relativeX > -edge) ) {
-        this.pushCrate('up', crate);
-
-        if (crate.enemy) {
-          crate.enemy.setBlockedDirection('down');
-        }
-      } else if (relativeY > edge && (relativeX < edge && relativeX > -edge)) {
-        this.pushCrate('down', crate);
-
-        if (crate.enemy) {
-          crate.enemy.setBlockedDirection('up');
-        }
-      } else if ( relativeX > edge && (relativeY < edge && relativeY > -edge) ) {
-        this.pushCrate('right', crate);
-      } else if ( relativeX < edge && (relativeY < edge && relativeY > -edge) ) {
-        this.pushCrate('left', crate);
-      }
-    };
+      this.handleCrateCollison(crate);
+    }
 }
