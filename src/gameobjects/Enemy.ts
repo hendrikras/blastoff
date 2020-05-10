@@ -46,6 +46,10 @@ export default class Enemy extends CollidesWithObjects {
 
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
+        if (this.pushedCrate && this.playersCrate !== crate) {
+            this.pushedCrate.enemy = null;
+        }
+        this.pushedCrate = crate;
         this.blockedDirection.none = false;
         this.distanceToBoxCorner = crate.width;
         crate.enemy = me;
@@ -53,19 +57,24 @@ export default class Enemy extends CollidesWithObjects {
       }
 
       public update() {
-          const {x, y} = this.body.velocity;
-          this.flipX = false;
-          if (y > 0) {
+        if (this.pushedCrate) {
+            if (this.pushedCrate.x - this.x > this.pushedCrate.height || this.pushedCrate.y - this.y > this.pushedCrate.height) {
+                this.pushedCrate.enemy = null;
+            }
+        }
+        const {x, y} = this.body.velocity;
+        this.flipX = false;
+        if (y > 0) {
             this.setFrame(1);
-          }
-          if (y < 0) {
+        }
+        if (y < 0) {
             this.setFrame(2);
         }
-          if (x > 0 && x > y) {
+        if (x > 0 && x > y) {
             this.setFrame(0);
             this.flipX = true;
         }
-          if (x < 0 && x > y) {
+        if (x < 0 && x > y) {
             this.setFrame(0);
         }
 
