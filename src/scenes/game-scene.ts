@@ -20,6 +20,7 @@ export class GameScene extends Phaser.Scene {
   private player: Player;
   private enemy: Enemy;
   private prison: Physics.Arcade.Sprite;
+  private rocket: Physics.Arcade.Sprite;
   private crates: Phaser.Physics.Arcade.Group;
   private playerCollider: Phaser.Physics.Arcade.Collider;
   private enemyCollider: Phaser.Physics.Arcade.Collider;
@@ -33,23 +34,27 @@ export class GameScene extends Phaser.Scene {
   public create() {
     const measureX = getGameWidth(this);
     const measureY = getGameHeight(this);
+    const landscape: boolean = measureX > measureY;
+    const measureShort: number = landscape ? measureY : measureX;
+    const measureLong: number = measureShort * 1.3;
     this.graphics = this.add.graphics();
-
-    const thickness = 2;
-    const color = 0xff0000;
+    this.gridUnit = Math.round(measureShort / 100);
+    const thickness = this.gridUnit;
+    const color = 0x997fff;
     const alpha = 1;
 
     this.graphics.lineStyle(thickness, color, alpha);
 
-    const landscape: boolean = measureX > measureY;
-    const measureShort: number = landscape ? measureY : measureX;
-    const measureLong: number = measureShort * 1.3;
     const getSize = (input: boolean) => input ? measureLong : measureShort;
     this.graphics.strokeRect(0, 0, getSize(landscape), getSize(!landscape));
-    this.gridUnit = Math.round(measureShort / 100);
+    // this.graphics.fillGradientStyle(0xff6600, 0xff0000, 0xffff00, 0xffff00, 1);
+    // this.graphics.fillRect(getSize(landscape), getSize(!landscape), 500, 500);
+
     // create the biggest world that will fit on this screen.
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, getSize(landscape), getSize(!landscape));
     setBounds(this.physics.world);
+    const tiles = this.physics.scene.add.tileSprite(getSize(landscape) / 2, getSize(!landscape) / 2, getSize(landscape), getSize(!landscape), 'tile');
+    tiles.setTileScale(this.gridUnit / 7);
 
     const crateConfig = {
       classType: Crate, // This is the class we created
@@ -65,6 +70,9 @@ export class GameScene extends Phaser.Scene {
     this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
     this.prison.setScale(this.gridUnit / 15);
     this.prison.name = 'prison';
+
+    this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');
+    this.rocket.setScale( this.gridUnit / 15);
 
     this.crates.children.iterate((crate: Crate) => {
       crate.setX(Phaser.Math.Between(0, measureLong));
@@ -88,8 +96,8 @@ export class GameScene extends Phaser.Scene {
     }, this.enemy);
 
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
+    this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
 
-    this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
   }
 
   public update() {
@@ -99,9 +107,6 @@ export class GameScene extends Phaser.Scene {
       this.enemy.exterminate(pos);
     }
 
-    if (this.keySpace.isDown) {
-        this.blastOff();
-    }
     this.player.update();
     this.enemy.update();
 
@@ -115,9 +120,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private blastOff() {
+    this.rocket.visible = false;
     const gravity = 25000;
-    this.player.setGravityY(gravity);
-    this.enemy.setGravityY(gravity);
+    this.player.setGravityY(gravity * 2);
+    this.enemy.setGravityY(gravity * 2);
 
     this.crates.children.iterate((crate: Phaser.Physics.Arcade.Sprite) => crate.setGravityY(gravity / 10));
     this.player.setVelocityY(0);
