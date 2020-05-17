@@ -66,6 +66,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('prison', 'assets/prison.svg');
     this.load.image('rocket', 'assets/rocket.svg');
     this.load.image('tile', 'assets/parkay-floor.svg');
+    this.load.image('stars', 'assets/stars.svg');
     // this.load.image('enemy', 'assets/robots.svg');
     this.load.spritesheet('enemy', 'assets/robots.svg', { frameWidth: 500, frameHeight: 505 });
     this.anims.create({
@@ -73,25 +74,6 @@ export class BootScene extends Phaser.Scene {
       frames: [ { key: 'enemy', frame: 1 } ],
       frameRate: -1,
   });
-
-    // this.load.spritesheet('enemy',
-    // 'assets/jack_alpha.png',
-    // { frameWidth: 50, frameHeight: 30 }
-// );
-
-// this.anims.create({
-//   key: 'stand',
-//   frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 1 }),
-//   frameRate: 1,
-//   repeat: -1
-// });
-
-// this.anims.create({
-//   key: 'move',
-//   frames: this.anims.generateFrameNumbers('enemy', { start: 1, end: 1 }),
-//   frameRate: 1,
-//   repeat: -1
-// });
 
   }
 

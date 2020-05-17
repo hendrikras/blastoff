@@ -26,6 +26,8 @@ export class GameScene extends Phaser.Scene {
   private enemyCollider: Phaser.Physics.Arcade.Collider;
   private enemyCratesCollider: Phaser.Physics.Arcade.Collider;
   private graphics: any;
+  private background;
+  private backgoundInc: number = 0;
 
   constructor() {
     super(sceneConfig);
@@ -47,10 +49,10 @@ export class GameScene extends Phaser.Scene {
 
     const getSize = (input: boolean) => input ? measureLong : measureShort;
     this.graphics.strokeRect(0, 0, getSize(landscape), getSize(!landscape));
-    // this.graphics.fillGradientStyle(0xff6600, 0xff0000, 0xffff00, 0xffff00, 1);
-    // this.graphics.fillRect(getSize(landscape), getSize(!landscape), 500, 500);
 
     // create the biggest world that will fit on this screen.
+
+    this.background = this.physics.scene.add.tileSprite(getGameWidth(this) / 2, getGameHeight(this) / 2, getGameWidth(this), getGameHeight(this), 'stars');
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, getSize(landscape), getSize(!landscape));
     setBounds(this.physics.world);
     const tiles = this.physics.scene.add.tileSprite(getSize(landscape) / 2, getSize(!landscape) / 2, getSize(landscape), getSize(!landscape), 'tile');
@@ -70,6 +72,7 @@ export class GameScene extends Phaser.Scene {
     this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
     this.prison.setScale(this.gridUnit / 15);
     this.prison.name = 'prison';
+    this.prison.depth = 2;
 
     this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');
     this.rocket.setScale( this.gridUnit / 15);
@@ -101,6 +104,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   public update() {
+    // set motion on the stars
+    this.backgoundInc === 0
+        ? this.background.tilePositionX -= 1
+        : this.background.tilePositionY -= this.backgoundInc;
 
     if (this.player.isMoving() && this.enemy.body.touching.none) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
@@ -122,6 +129,7 @@ export class GameScene extends Phaser.Scene {
   private blastOff() {
     this.rocket.visible = false;
     const gravity = 25000;
+    this.backgoundInc = 10;
     this.player.setGravityY(gravity * 2);
     this.enemy.setGravityY(gravity * 2);
 
