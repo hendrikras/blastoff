@@ -40,8 +40,8 @@ export const impassable = (crate: Crate, otherCrate: Crate, factor: number, dire
       const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + factor;
       return direction.up || direction.left ? upLeftCondition : downRightCondition;
   } else {
-    const upleft = world.bounds[d2str] >= crate[axis] - halfSize;
-    const downright = world.bounds[d2str] <= crate[axis] + halfSize;
+    const upleft = world.bounds[d2str] >= Math.round(crate[axis] - halfSize);
+    const downright = world.bounds[d2str] <= Math.round(crate[axis] + halfSize);
     return direction.up || direction.left ? upleft : downright;
   }
  };
