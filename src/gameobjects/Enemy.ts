@@ -1,11 +1,6 @@
-import { Math } from 'phaser';
+import { Math, Physics } from 'phaser';
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
-function pushCrate(direction: string, crate: Crate) {
-    this.setBlockedDirection(direction);
-    this.xThreshold = crate.x / this.gridUnit;
-    this.setVelocity(0);
-}
 export default class Enemy extends CollidesWithObjects {
     private readonly speed: number = 0;
     private playersCrate: Crate;
@@ -15,16 +10,10 @@ export default class Enemy extends CollidesWithObjects {
         super(config.scene, config.x, config.y, 'enemy');
 
         config.scene.add.existing(this);
-        config.scene.physics.add.existing(this);
-
         this.speed = gridUnit * 20;
         this.gridUnit = gridUnit / 10;
-        this.setScale(this.gridUnit / 8);
-        this.setCollideWorldBounds(true);
         this.setFrame(1);
-        this.xThreshold = this.x / gridUnit;
-        this.yThreshold = this.y / gridUnit;
-        this.pushCrate = pushCrate;
+        this.pushCrate = this.pushCrateImpl;
     }
     public get chasePlayer() {
       return this.$chasePlayer;
@@ -36,13 +25,13 @@ export default class Enemy extends CollidesWithObjects {
       this.blockedDirection[direction] = true;
     }
     public exterminate(player: Math.Vector2) {
-        const enemyVelocity = new Math.Vector2(player.x - this.x , player.y  - this.y).normalize();
+        const enemyVelocity = new Math.Vector2(player.x - this.parentContainer.x , player.y  - this.parentContainer.y).normalize();
         const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
         const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
 
         this.resetBlockedDirections();
 
-        this.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
+        (this.parentContainer.body as Physics.Arcade.Body).setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
 
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
@@ -58,26 +47,17 @@ export default class Enemy extends CollidesWithObjects {
 
       public update() {
         if (this.pushedCrate) {
-            if (this.pushedCrate.x - this.x > this.pushedCrate.height || this.pushedCrate.y - this.y > this.pushedCrate.height) {
+            if (this.pushedCrate.x - this.parentContainer.x > this.pushedCrate.height || this.pushedCrate.y - this.parentContainer.y > this.pushedCrate.height) {
                 this.pushedCrate.enemy = null;
             }
         }
-        const {x, y} = this.body.velocity;
-        this.flipX = false;
-        if (y > 0) {
-            this.setFrame(1);
-        }
-        if (y < 0) {
-            this.setFrame(2);
-        }
-        if (x > 0 && x > y) {
-            this.setFrame(0);
-            this.flipX = true;
-        }
-        if (x < 0 && x > y) {
-            this.setFrame(0);
-        }
-
       }
+
+    private pushCrateImpl(direction: string, crate: Crate) {
+        this.setBlockedDirection(direction);
+        const opAxis = direction === 'right' || direction ===  'left' ? 'y' : 'x';
+        this.parentContainer[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
+        (this.parentContainer.body as Physics.Arcade.Body).setVelocity(0);
+    }
 
 }
