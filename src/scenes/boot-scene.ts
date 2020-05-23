@@ -69,6 +69,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('stars', 'assets/stars.svg');
     // this.load.image('enemy', 'assets/robots.svg');
     this.load.spritesheet('enemy', 'assets/robots.svg', { frameWidth: 500, frameHeight: 505 });
+    this.load.spritesheet('crates', 'assets/Crates.svg', { frameWidth: 110.5, frameHeight: 105 });
     this.anims.create({
       key: 'face',
       frames: [ { key: 'enemy', frame: 1 } ],

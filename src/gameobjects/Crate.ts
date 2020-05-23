@@ -1,4 +1,4 @@
-import { Input, Physics, Math as PMath, Types, Scene } from 'phaser';
+import { Input, Physics, Math, Types, Scene } from 'phaser';
 // import Player from './Player';
 import Enemy from './Enemy';
 
@@ -19,9 +19,10 @@ class Crate extends Physics.Arcade.Sprite {
 
   }
    constructor(scene: Scene, x: number , y: number) {
-       super(scene, x, y, 'crate');
+       super(scene, x, y, 'crates');
        scene.add.existing(this);
        scene.physics.add.existing(this);
+       this.setFrame(Math.Between(0, 4));
    }
 }
 
