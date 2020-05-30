@@ -1,5 +1,6 @@
 import {Physics, Types} from 'phaser';
 import Crate from './gameobjects/Crate';
+import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 
 type Direction = Types.Physics.Arcade.ArcadeBodyCollision;
 export const getGameWidth = (scene: Phaser.Scene) => {
@@ -17,6 +18,7 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Direction):
   // as this function is used on the x axis too. but this is already confusing as is.
   const leftCornerItem = item[axis] - halfSize;
   const rightCornerItem = item[axis] + halfSize;
+  // reminder: change halfsize into halfwidth/ height if the item is not square.
   const leftCornerCrate = crate[axis] - halfSize;
   const rightCornerCrate = crate[axis] + halfSize;
   const upLeftCondition = item[opaxis] + halfSize <= crate[opaxis] - halfSize;
@@ -28,7 +30,7 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Direction):
     || (rightCornerItem <= rightCornerCrate && rightCornerItem >= leftCornerCrate )
   );
 };
-export const impassable = (crate: Crate, otherCrate: Crate, factor: number, direction: Direction, world: Physics.Arcade.World): boolean => {
+export const impassable = (crate: Crate, otherCrate: Crate, factor: number, direction: Direction, world: ArcadeBodyBounds): boolean => {
   if (crate.enemy) {
     return true;
   }
@@ -40,8 +42,8 @@ export const impassable = (crate: Crate, otherCrate: Crate, factor: number, dire
       const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + factor;
       return direction.up || direction.left ? upLeftCondition : downRightCondition;
   } else {
-    const upleft = world.bounds[d2str] >= Math.round(crate[axis] - halfSize);
-    const downright = world.bounds[d2str] <= Math.round(crate[axis] + halfSize);
+    const upleft = world[d2str] >= crate[axis] - halfSize;
+    const downright = world[d2str] <= crate[axis] + halfSize;
     return direction.up || direction.left ? upleft : downright;
   }
  };

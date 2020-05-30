@@ -1,11 +1,11 @@
-import * as Phaser from 'phaser';
+import { GameObjects } from 'phaser';
 
 const padding = 10;
 const minimumWidth = 200;
 const minimumHeight = 50;
 
-export class MenuButton extends Phaser.GameObjects.Rectangle {
-  private label: Phaser.GameObjects.Text;
+export class MenuButton extends GameObjects.Rectangle {
+  private label: GameObjects.Text;
 
   constructor(scene: Phaser.Scene, x: number, y: number, text: string, onClick?: () => void) {
     super(scene, x, y);
