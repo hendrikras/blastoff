@@ -6,11 +6,11 @@
       {
         "name": "typescript-tslint-plugin",
         "alwaysShowRuleFailuresAsWarnings": false,
-        "ignoreDefinitionFiles": false,
+        "ignoreDefinitionFiles": false
       }
     ]
   },
   "include": [
     "**/*.ts"
-  ],
+  ]
 }

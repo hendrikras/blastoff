@@ -1,8 +1,9 @@
-import { Physics, Types } from 'phaser';
+import { Physics, Types, GameObjects } from 'phaser';
 import { collidesOnAxes, impassable } from '../helpers';
 
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
+import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -11,14 +12,19 @@ export default class Player extends CollidesWithObjects {
     private pace: number = 30;
     private crates: Crate[];
     private factor: number = (this.pace / 10) * 2.5;
+    private worldBounds: ArcadeBodyBounds;
 
-    constructor(config, gridUnit: number, crates: Physics.Arcade.Group) {
-        super(config.scene, config.x, config.y, 'man');
+    constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, scale) {
+        super(config.scene, config.x, config.y, size, scale);
+
+        const sprite = config.scene.add.sprite(0, 0 , 'man');
+        this.add(sprite);
         this.crates = crates.children.getArray() as Crate[];
         this.speed = gridUnit * this.pace;
         this.gridUnit = gridUnit / 10;
         this.cursorKeys = config.scene.input.keyboard.createCursorKeys();
         this.pushCrate = this.pushCrateImpl;
+        this.worldBounds = config.scene.physics.world.bounds;
     }
 
     public isMoving() {
@@ -62,7 +68,7 @@ export default class Player extends CollidesWithObjects {
 
         // We normalize the velocity so that the player is always moving at the same speed, regardless of direction.
         const normalizedVelocity = velocity.normalize();
-        (this as any).parentContainer.body.setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
+        (this as any).body.setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
       }
     public crateCollider = (me: Player, crate: Crate) => {
 
@@ -85,10 +91,10 @@ export default class Player extends CollidesWithObjects {
             .sort((a: Crate, b: Crate) => a[axis] < b[axis] ? -1 : 1 );
         const collidingCrate = up || left ? selection.pop() : selection[0];
 
-        if (impassable(crate, collidingCrate, this.factor, collision, this.scene.physics.world)) {
+        if (impassable(crate, collidingCrate, this.factor, collision, this.worldBounds)) {
             this.blockedDirection = { up, down, right, left, none: false};
             const opAxis = right || left ? 'y' : 'x';
-            this.parentContainer[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
+            this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
         } else {
             up || left ? crate[axis] -= this.factor : crate[axis] += this.factor;
         }
