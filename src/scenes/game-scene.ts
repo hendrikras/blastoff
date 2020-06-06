@@ -4,9 +4,6 @@ import Crate from '../gameobjects/Crate';
 import Enemy from '../gameobjects/Enemy';
 import Player from '../gameobjects/Player';
 import { getGameWidth, getGameHeight } from '../helpers';
-import Container = Phaser.GameObjects.Container;
-import ArcadeColliderType = Phaser.Types.Physics.Arcade.ArcadeColliderType;
-import CollidesWithObjects from '../gameobjects/CollidesWithObjects';
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -38,11 +35,12 @@ export class GameScene extends Phaser.Scene {
   public create() {
     const measureX = getGameWidth(this);
     const measureY = getGameHeight(this);
-    const landscape: boolean = measureX > measureY;
-    const measureShort: number = landscape ? measureY : measureX;
+    const isLandscape: boolean = measureX > measureY;
+    const measureShort: number = isLandscape ? measureY : measureX;
     const measureLong: number = measureShort * 1.3;
     this.graphics = this.add.graphics();
     this.gridUnit = Math.round(measureShort / 100);
+    this.data.set('gridUnit', this.gridUnit);
     const thickness = this.gridUnit;
     const color = 0x997fff;
     const alpha = 1;
@@ -50,27 +48,32 @@ export class GameScene extends Phaser.Scene {
     this.graphics.lineStyle(thickness, color, alpha);
 
     const getSize = (input: boolean) => input ? measureLong : measureShort;
-    this.graphics.strokeRect(0, 0, getSize(landscape), getSize(!landscape));
+    let startX = measureX - getSize(isLandscape);
+    startX = startX === 0 ? 0 : startX / 2;
+    let startY = measureY - getSize(!isLandscape);
+    startY = startY === 0 ? 0 : startY / 2;
+    this.graphics.strokeRect( startX, startY, getSize(isLandscape), getSize(!isLandscape));
 
     // create the biggest world that will fit on this screen.
 
     this.background = this.physics.scene.add.tileSprite(getGameWidth(this) / 2, getGameHeight(this) / 2, getGameWidth(this), getGameHeight(this), 'stars');
-    const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(0, 0, getSize(landscape), getSize(!landscape));
+    const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
     setBounds(this.physics.world);
-    const tiles = this.physics.scene.add.tileSprite(getSize(landscape) / 2, getSize(!landscape) / 2, getSize(landscape), getSize(!landscape), 'tile');
+    const tiles = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, getSize(isLandscape), getSize(!isLandscape), 'tile');
     tiles.setTileScale(this.gridUnit / 7);
 
     const crateConfig = {
       classType: Crate, // This is the class we created
       active: true,
       visible: true,
-      repeat: 9,
+      repeat: 1,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
-      setXY: { x: 500, y: 100,  stepY: this.gridUnit * 10 },
+      // setXY: { x: 0, y: 0,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
+      // runChildUpdate: true,
       key: 'crate',
     };
-    this.crates = new Physics.Arcade.Group(this.physics.world, this, crateConfig);
+    this.crates = this.physics.add.group(crateConfig);
     this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
     this.prison.setScale(this.gridUnit / 15);
     this.prison.name = 'prison';
@@ -79,8 +82,15 @@ export class GameScene extends Phaser.Scene {
     this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');
     this.rocket.setScale( this.gridUnit / 15);
 
-    this.crates.children.iterate((crate: Crate) => {
-      crate.setX(Phaser.Math.Between(0, measureLong));
+    this.crates.children.iterate((crate: Crate, idx: number) => {
+      if (idx === 0) {
+        crate.setX(measureX / 2);
+        crate.setY(measureY / 2);
+      } else {
+          crate.setX(Phaser.Math.Between(0, measureLong));
+
+      }
+      crate.update();
     });
     this.crates.add(this.prison);
     this.player = new Player({scene: this, x: measureLong / 2, y: measureShort / 2}, this.gridUnit, this.crates, 32, this.gridUnit / 4);
@@ -102,7 +112,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.player.isMoving() ) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
-      this.enemy.exterminate(pos);
+      // this.enemy.exterminate(pos);
     }
 
     this.player.update();
