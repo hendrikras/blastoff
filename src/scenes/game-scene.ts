@@ -41,6 +41,7 @@ export class GameScene extends Phaser.Scene {
     this.graphics = this.add.graphics();
     this.gridUnit = Math.round(measureShort / 100);
     this.data.set('gridUnit', this.gridUnit);
+    this.data.set('short', measureShort);
     const thickness = this.gridUnit;
     const color = 0x997fff;
     const alpha = 1;
@@ -66,9 +67,9 @@ export class GameScene extends Phaser.Scene {
       classType: Crate, // This is the class we created
       active: true,
       visible: true,
-      repeat: 1,
+      repeat: 9,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
-      // setXY: { x: 0, y: 0,  stepY: this.gridUnit * 10 },
+      setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
       // runChildUpdate: true,
       key: 'crate',
@@ -81,15 +82,11 @@ export class GameScene extends Phaser.Scene {
 
     this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');
     this.rocket.setScale( this.gridUnit / 15);
+    const {left, right} = this.physics.world.bounds;
 
     this.crates.children.iterate((crate: Crate, idx: number) => {
-      if (idx === 0) {
-        crate.setX(measureX / 2);
-        crate.setY(measureY / 2);
-      } else {
-          crate.setX(Phaser.Math.Between(0, measureLong));
-
-      }
+      const half = crate.width / 2;
+      crate.setX(Phaser.Math.Between(left + half , right - half));
       crate.update();
     });
     this.crates.add(this.prison);
