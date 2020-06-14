@@ -55,10 +55,16 @@ export function lineIntersect(p1: Math.Vector2, p2: Math.Vector2, p3: Math.Vecto
     }
     const ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / denom;
     const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / denom;
-    return {
+    return new Math.Vector2({
         x: p1.x + ua * (p2.x - p1.x),
         y: p1.y + ua * (p2.y - p1.y),
-        seg1: ua >= 0 && ua <= 1,
-        seg2: ub >= 0 && ub <= 1,
-    };
+        // seg1: ua >= 0 && ua <= 1,
+        // seg2: ub >= 0 && ub <= 1,
+    });
+}
+const varToString = (varObj: object) => Object.keys(varObj)[0];
+export function addProperty(object: object, val: object) {
+    const name = varToString(val);
+    object[name] = Object.values(val)[0];
+    return object;
 }
