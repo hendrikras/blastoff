@@ -42,18 +42,21 @@ export class GameScene extends Phaser.Scene {
     this.gridUnit = Math.round(measureShort / 100);
     this.data.set('gridUnit', this.gridUnit);
     this.data.set('short', measureShort);
-    const thickness = this.gridUnit;
+    const thickness = this.gridUnit * 5;
     const color = 0x997fff;
     const alpha = 1;
 
     this.graphics.lineStyle(thickness, color, alpha);
+    this.graphics.fillStyle(color);
+    this.graphics.depth = 1;
 
     const getSize = (input: boolean) => input ? measureLong : measureShort;
     let startX = measureX - getSize(isLandscape);
     startX = startX === 0 ? 0 : startX / 2;
     let startY = measureY - getSize(!isLandscape);
     startY = startY === 0 ? 0 : startY / 2;
-    this.graphics.strokeRect( startX, startY, getSize(isLandscape), getSize(!isLandscape));
+    this.graphics.strokeRect( startX + this.gridUnit * 2.5, startY + this.gridUnit * 2.5, getSize(isLandscape) - this.gridUnit * 2.5, getSize(!isLandscape) - this.gridUnit * 2.5);
+    // this.graphics.fillRect( 0, 0, startX, startY);
 
     // create the biggest world that will fit on this screen.
 
@@ -82,6 +85,7 @@ export class GameScene extends Phaser.Scene {
 
     this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');
     this.rocket.setScale( this.gridUnit / 15);
+    this.rocket.setDepth(1);
     const {left, right} = this.physics.world.bounds;
 
     this.crates.children.iterate((crate: Crate, idx: number) => {
@@ -90,14 +94,17 @@ export class GameScene extends Phaser.Scene {
       crate.update();
     });
     this.crates.add(this.prison);
+    this.crates.setDepth(2);
     this.player = new Player({scene: this, x: measureLong / 2, y: measureShort / 2}, this.gridUnit, this.crates, 32, this.gridUnit / 4);
+    this.player.setDepth(2);
 
     this.enemy = new Enemy({scene: this, x: measureLong / 2, y: 100}, this.gridUnit, 512, this.gridUnit / 64);
+    this.enemy.setDepth(2);
+    // @ts-ignore
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
-    this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
+    this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, () => this.enemy.cratesOverlap);
     this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
-
   }
 
   public update() {
@@ -105,7 +112,6 @@ export class GameScene extends Phaser.Scene {
     this.backgoundInc === 0
         ? this.background.tilePositionX -= 1
         : this.background.tilePositionY -= this.backgoundInc;
-
 
     if (this.player.isMoving() ) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
@@ -119,9 +125,6 @@ export class GameScene extends Phaser.Scene {
   private endGame(won: boolean = false) {
     this.add.text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'you win' : 'game over').setFontSize(this.gridUnit * 5);
     this.physics.pause();
-
-    // this.player.setTint(0xff0000);
-
   }
 
   private blastOff() {
