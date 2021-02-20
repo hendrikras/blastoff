@@ -33,7 +33,7 @@ class Crate extends Physics.Arcade.Sprite {
        scene.physics.add.existing(this);
        this.setFrame(Math.Between(0, 4));
        this.graphics = scene.add.graphics();
-       this.graphics.depth = 0;
+       this.graphics.depth = 1;
        const height = getGameHeight(scene);
        const width = getGameWidth(scene);
        this.screenHeight = height;
@@ -57,14 +57,15 @@ class Crate extends Physics.Arcade.Sprite {
    }
    public update() {
       // there is a lot of calculus going on here in order to achieve the 3d 'effect'.
-       // the reason why not to use hardware accelarated libs (Three.js), like a sane person would do is because all that is required is a 'one point perspective' 3d on very simple geomitry (cube).
-       // So that should still be simple enough for phaser to handle.
+       // the reason why not to use hardware accelarated methods is because using quads and meshes are such a pain in phaser
+       // and since all that is required is a 'one point perspective' 3d on very simple geomitry (cube).
+       // So screw it, should still be simple enough for even phaser to handle.
       this.graphics.clear();
-      this.depth = 1;
 
-      this.graphics.setTexture('crates');
-      // this.graphics.lineStyle(3, 0x000FFFF, 1.0);
-      // this.graphics.fillStyle(0x000, 0.3);
+      // this.graphics.setTexture('crates')
+      this.graphics.fillStyle(0x996633, 1);
+
+      this.graphics.lineStyle(3, 0x663300, 1.0);
 
       const { x, y } = this;
        // this mystery value will take us to the edge of the cube, not a clue why this.width / 2 doesnt do the same.
@@ -95,7 +96,7 @@ class Crate extends Physics.Arcade.Sprite {
       this.graphics.lineTo(floorTop.x, floorTop.y);
       this.graphics.closePath();
       this.graphics.fillPath();
-      // this.graphics.strokePath();
+      this.graphics.strokePath();
 
       // there is one floor value, that corners. and therefore will be the same for both axis
       // const {pos: floorGlue,  factor} = this.topsOrBottoms(floorTop, floorBottom, xFactor, yFactor);
@@ -104,14 +105,13 @@ class Crate extends Physics.Arcade.Sprite {
 
       // const floorOpposite =
       // y face
-
       this.graphics.moveTo(blotr.x, blotr.y);
       this.graphics.lineTo(brotl.x, brotl.y);
       this.graphics.lineTo(intersect4.x, intersect4.y); // floor left (when past VP) bottom half
       this.graphics.lineTo(intersect3.x, intersect3.y); // floor right
       this.graphics.closePath();
       this.graphics.fillPath();
-      // this.graphics.strokePath();
+      this.graphics.strokePath();
 
    }
     private pastCenter = (axis: string) => this[axis] > this.vanishPoint[axis];
