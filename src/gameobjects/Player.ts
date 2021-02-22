@@ -99,6 +99,5 @@ export default class Player extends CollidesWithObjects {
             up || left ? crate[axis] -= this.factor : crate[axis] += this.factor;
         }
         crate.update();
-        // console.log(crate);
     }
 }
