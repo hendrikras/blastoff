@@ -1,4 +1,4 @@
-import {Physics, Types, Math} from 'phaser';
+import {Physics, Types, Math as PMath} from 'phaser';
 import Crate from './gameobjects/Crate';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 
@@ -48,14 +48,14 @@ export const impassable = (crate: Crate, otherCrate: Crate, factor: number, dire
   }
  };
 
-export function lineIntersect(p1: Math.Vector2, p2: Math.Vector2, p3: Math.Vector2, p4: Math.Vector2) {
+export function lineIntersect(p1: PMath.Vector2, p2: PMath.Vector2, p3: PMath.Vector2, p4: PMath.Vector2) {
     const denom = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
     if (denom === 0) {
         return null;
     }
     const ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / denom;
-    const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / denom;
-    return new Math.Vector2({
+    // const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / denom;
+    return new PMath.Vector2({
         x: p1.x + ua * (p2.x - p1.x),
         y: p1.y + ua * (p2.y - p1.y),
         // seg1: ua >= 0 && ua <= 1,
@@ -68,3 +68,10 @@ export function addProperty(object: object, val: object) {
     object[name] = Object.values(val)[0];
     return object;
 }
+
+export function calcDistance(foo: PMath.Vector2, bar: PMath.Vector2) {
+    const a = foo.x - bar.x;
+    const b = foo.y - bar.y;
+    return Math.hypot( a, b);
+}
+
