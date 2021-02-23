@@ -39,6 +39,9 @@ class Crate extends Physics.Arcade.Sprite {
        scene.physics.add.existing(this);
        this.key = name;
        this.setFrame(PMath.Between(0, 4));
+       this.setCollideWorldBounds();
+       // @ts-ignore
+       this.body.onWorldBounds = true;
        this.graphics = scene.add.graphics();
        this.graphics2 = scene.add.graphics();
        const height = getGameHeight(scene);

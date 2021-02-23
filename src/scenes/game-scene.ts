@@ -5,6 +5,7 @@ import Enemy from '../gameobjects/Enemy';
 import Player from '../gameobjects/Player';
 import Wall from '../gameobjects/Wall';
 import {getGameWidth, getGameHeight, collidesOnAxes, blockedInDirection, reachedBound} from '../helpers';
+import EventEmitter = Phaser.Events.EventEmitter;
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -32,6 +33,7 @@ export class GameScene extends Phaser.Scene {
   private backgoundInc: number = 0;
   private gravitySpeed: number;
   private rocketCollider: Phaser.Physics.Arcade.Collider;
+  private cratesPreRenderEvent: EventEmitter;
 
   constructor() {
     super(sceneConfig);
@@ -79,7 +81,6 @@ export class GameScene extends Phaser.Scene {
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
       setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
-      // runChildUpdate: true,
       key: 'crates',
     };
     this.crates = this.physics.add.group(crateConfig);
@@ -121,21 +122,27 @@ export class GameScene extends Phaser.Scene {
     this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
     this.fallingCrates = [];
     this.crates.children.iterate((crate: Crate, idx: number) => {
+      crate.name = `crate${idx}`;
       crate.setX(Phaser.Math.Between(left + half , right - half));
       this.fallingCrates.push(crate);
     });
     this.boundedCrates = [];
-    // this.crateCollection = this.crates.children.getArray() as Crate[];
 
+    this.physics.world.on('worldbounds', (body /*, up, down, left, right*/) => {
+      this.cratesPreRenderEvent = this.physics.scene.game.events.on('prerender', (/*renderer, time, delta*/) => {
+        if (this.rocket.visible) {
+          this.crates.children.iterate((crate: Crate, idx: number) => {
+            crate.update();
+          });
+        } else {
+          body.gameObject.update();
+        }
+        this.cratesPreRenderEvent.removeAllListeners();
+      }, this);
+    });
   }
   public update(time) {
-    if (time < 1200.0000000000) {
-      console.log(time);
-      this.crates.children.iterate((crate: Crate, idx: number) => {
-        crate.update();
-      });
-    }
-    // console.log(va);
+
     // set motion on the stars
 
     if (!this.rocket.visible) {
@@ -177,9 +184,7 @@ export class GameScene extends Phaser.Scene {
       });
       if (reachedBound(crate, this.gravitySpeed, collision, bounds)) {
         this.boundedCrates.push(crate);
-        crate.update();
       }
-      // this.doCollision(crate, null, collision);
     });
     this.fallingCrates
         .filter( ( crate ) => !blockedCrates.includes( crate ) )
@@ -196,14 +201,6 @@ export class GameScene extends Phaser.Scene {
     this.rocketCollider.destroy();
     // const gravity = 25000;
     this.backgoundInc = 10;
-    // (this.player.body as Physics.Arcade.Body).setGravityY(gravity * 2);
-    // (this.enemy.body as Physics.Arcade.Body).setGravityY(gravity * 2);
-
-
-    // this.physics.world.colliders.remove(this.enemyCollider);
-    // this.physics.world.colliders.remove(this.enemyCratesCollider);
-    // this.physics.world.addCollider(this.crates, this.enemy);
-    // this.physics.world.addCollider(this.crates, this.crates);
     this.physics.add.overlap(this.prison, this.enemy, () => {
         this.endGame(true);
     });
