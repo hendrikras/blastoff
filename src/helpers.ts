@@ -30,23 +30,33 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Direction):
     || (rightCornerItem <= rightCornerCrate && rightCornerItem >= leftCornerCrate )
   );
 };
-export const impassable = (crate: Crate, otherCrate: Crate, factor: number, direction: Direction, world: ArcadeBodyBounds): boolean => {
+export const impassable = (crate: Crate, otherCrate: Crate, speed: number, direction: Direction, world: ArcadeBodyBounds): boolean =>
+    reachedBound(crate, speed, direction, world) || blockedInDirection(crate, otherCrate, speed, direction) ;
+
+export const blockedInDirection = (crate: Crate, otherCrate: Crate, speed: number, direction: Direction): boolean => {
   if (crate.enemy) {
     return true;
   }
+  if (otherCrate) {
   const halfSize = crate.body.height / 2;
   const axis = direction.up || direction.down ? 'y' : 'x';
-  const d2str = direction.left ? 'left' : direction.right ? 'right' : direction.up ? 'top' : direction.down ? 'bottom' : 'none';
-  if (otherCrate) {
-      const upLeftCondition = otherCrate[axis] + halfSize >= crate[axis] - halfSize - factor;
-      const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + factor;
-      return direction.up || direction.left ? upLeftCondition : downRightCondition;
+  const upLeftCondition = otherCrate[axis] + halfSize >= crate[axis] - halfSize - speed;
+  const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + speed;
+  return direction.up || direction.left ? upLeftCondition : downRightCondition;
   } else {
+    return false;
+  }
+ };
+
+export const reachedBound = (crate: Crate, speed: number, direction: Direction, world: ArcadeBodyBounds): boolean => {
+    const halfSize = crate.body.height / 2;
+    const axis = direction.up || direction.down ? 'y' : 'x';
+    const d2str = direction.left ? 'left' : direction.right ? 'right' : direction.up ? 'top' : direction.down ? 'bottom' : 'none';
+
     const upleft = world[d2str] >= crate[axis] - halfSize;
     const downright = world[d2str] <= crate[axis] + halfSize;
     return direction.up || direction.left ? upleft : downright;
-  }
- };
+};
 
 export function lineIntersect(p1: PMath.Vector2, p2: PMath.Vector2, p3: PMath.Vector2, p4: PMath.Vector2) {
     const denom = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
@@ -74,4 +84,3 @@ export function calcDistance(foo: PMath.Vector2, bar: PMath.Vector2) {
     const b = foo.y - bar.y;
     return Math.hypot( a, b);
 }
-
