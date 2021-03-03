@@ -79,8 +79,7 @@ export function addProperty(object: object, val: object) {
     return object;
 }
 
-export function calcDistance(foo: PMath.Vector2, bar: PMath.Vector2) {
-    const a = foo.x - bar.x;
-    const b = foo.y - bar.y;
-    return Math.hypot( a, b);
+export function gcd(x, y) {
+    const cb = (a, b) => (b === 0 ? a : cb(b, a % b));
+    return cb(Math.abs(x), Math.abs(y));
 }
