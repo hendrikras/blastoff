@@ -97,7 +97,10 @@ export class GameScene extends Phaser.Scene {
     const wallleft = new Wall(this, left - edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
     const wallright = new Wall(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
     const walls = [walltop, wallbottom, wallleft, wallright];
-    walls.forEach((w) => w.update());
+    walls.forEach((w) => {
+      w.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
+      w.update() ;
+    });
 
     const cube = new Wall(this, centerY, centerX, quarterCrate * 4, quarterCrate * 4, quarterCrate * 4, wallcolor);
     this.crates.add(cube);
@@ -193,8 +196,10 @@ export class GameScene extends Phaser.Scene {
         .filter( ( crate ) => !blockedCrates.includes( crate ) )
         .filter( ( crate ) => !this.boundedCrates.includes( crate ) )
         .forEach((crate) => {
-          crate.y += this.gravitySpeed;
-          crate.update();
+          if (crate instanceof Crate) {
+            crate.y += this.gravitySpeed;
+            crate.update();
+          }
         });
     this.player.y += this.gravitySpeed;
     this.enemy.y += this.gravitySpeed;
