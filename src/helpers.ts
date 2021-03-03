@@ -1,6 +1,7 @@
 import {Physics, Types, Math as PMath} from 'phaser';
 import Crate from './gameobjects/Crate';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
+import Wall from './gameobjects/Wall';
 
 type Direction = Types.Physics.Arcade.ArcadeBodyCollision;
 export const getGameWidth = (scene: Phaser.Scene) => {
@@ -31,7 +32,7 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Direction):
   );
 };
 export const impassable = (crate: Crate, otherCrate: Crate, speed: number, direction: Direction, world: ArcadeBodyBounds): boolean =>
-    reachedBound(crate, speed, direction, world) || blockedInDirection(crate, otherCrate, speed, direction) ;
+    reachedBound(crate, speed, direction, world) || blockedInDirection(crate, otherCrate, speed, direction) || crate instanceof Wall;
 
 export const blockedInDirection = (crate: Crate, otherCrate: Crate, speed: number, direction: Direction): boolean => {
   if (crate.enemy) {
