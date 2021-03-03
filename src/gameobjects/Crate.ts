@@ -1,7 +1,7 @@
-import { Input, Physics, Math as PMath, Types, Scene } from 'phaser';
+import { Input, Physics, Math as PMath, Types, Scene, Geom } from 'phaser';
 // import Player from './Player';
 import Enemy from './Enemy';
-import { getGameWidth, getGameHeight, lineIntersect, calcDistance} from '../helpers';
+import { getGameWidth, getGameHeight, lineIntersect} from '../helpers';
 import Vector2 = Phaser.Math.Vector2;
 
 class Crate extends Physics.Arcade.Sprite {
@@ -27,14 +27,15 @@ class Crate extends Physics.Arcade.Sprite {
   private MeasurePointY2: PMath.Vector2;
   private MeasurePointX1: PMath.Vector2;
   private MeasurePointX2: PMath.Vector2;
+  private dimensions: PMath.Vector2;
   private point: PMath.Vector2;
   private screenHeight: number;
   private key;
   private gridUnit: number;
-  private centerCubeToEdge: number;
-    private  function;    constructor(scene: Scene, x: number , y: number, name) {
+  private centerCubeToEdge: Vector2;
+    private  function;    constructor(scene: Scene, x: number , y: number, name, dimensions: Vector2) {
        super(scene, x, y, name);
-        // console.log(texture);
+
        scene.add.existing(this);
        scene.physics.add.existing(this);
        this.key = name;
@@ -66,13 +67,20 @@ class Crate extends Physics.Arcade.Sprite {
        this.MeasurePointX2 = new PMath.Vector2(this.vanishPoint.x - val, this.vanishPoint.y);
        // this mystery value will take us to the edge of the cube
        this.gridUnit = scene.data.get('gridUnit');
-       this.centerCubeToEdge = this.gridUnit  * 2.6;
-       // this.centerCubeToEdge = this.body.width / 5;
+       const xy = this.gridUnit * 2.6;
+       this.centerCubeToEdge = new Vector2(xy, xy);
+       if (dimensions) {
+            this.dimensions = dimensions;
+        } else {
+           this.dimensions = new Vector2(2,2);
+        }
+
    }
    public update() {
-       const { x, y, centerCubeToEdge, graphics, mp, vanishPoint, gridUnit } = this;
+       const { x, y, centerCubeToEdge, graphics, mp, vanishPoint } = this;
        this.point.x = x;
        this.point.y = y;
+
        // there is a lot of calculus going on here in order to achieve the 3d 'effect'.
        // the reason why not to use hardware accelarated libs (Three.js), like a sane person would do is because all that is required is a 'one point perspective' 3d on very simple geomitry (cube).
        // and working with meshes in phaser is still to buggy at this point in time
@@ -80,8 +88,8 @@ class Crate extends Physics.Arcade.Sprite {
        graphics.clear();
 
       // mirror everything once past the vanishing point (center)
-       const xFactor = this.pastCenter('x') ? -centerCubeToEdge : centerCubeToEdge;
-       const yFactor = this.pastCenter('y') ? -centerCubeToEdge : centerCubeToEdge;
+       const xFactor = this.pastCenter('x') ? -centerCubeToEdge.x : centerCubeToEdge.x;
+       const yFactor = this.pastCenter('y') ? -centerCubeToEdge.y : centerCubeToEdge.y;
 
       // this is either topleft of topright depending on whether crate is positioned on the left of right side of the screen
        const top = new PMath.Vector2(x + xFactor * 2, y - xFactor * 2);
@@ -99,7 +107,7 @@ class Crate extends Physics.Arcade.Sprite {
 
        // setting the depth of the 3d effect is based on a 'magic' value that is based on distance to the center
        // closer to center is higher but never bigger than 2
-       const magicZ = (1000 - calcDistance(this.vanishPoint, this.point) ) / 1000 + 1;
+       const magicZ = (1000 - this.vanishPoint.distance( this.point))  / 1000 + 1;
 
        graphics.setDepth(magicZ);
 
@@ -132,9 +140,14 @@ class Crate extends Physics.Arcade.Sprite {
         const bottomboard = bottom.clone().lerp(floorBottom, divide).clone();
         const topfloorboard = top.clone().lerp(floorTop, divide2).clone();
         const bottomfloorboard = bottom.clone().lerp(floorBottom, divide2).clone();
-        this.drawRect(top, bottom, topboard, bottomboard);
-        this.drawRect(topboard,  bottomboard, topfloorboard, bottomfloorboard);
-        this.drawRect(topfloorboard, bottomfloorboard, floorTop, floorBottom);
+        graphics.fillPoints([top, bottom, bottomboard, topboard], true);
+        graphics.strokePath();
+
+        graphics.fillPoints([topboard,  bottomboard, bottomfloorboard, topfloorboard], true);
+        graphics.strokePath();
+
+        graphics.fillPoints([topfloorboard, bottomfloorboard, floorBottom, floorTop], true);
+        graphics.strokePath();
 
         // draw 7 semi transparant vertical wooden beams on the center of the crate
         let prevTop = topboard;
@@ -143,46 +156,20 @@ class Crate extends Physics.Arcade.Sprite {
         for (let i = 1; i <= beams; i++) {
             const lerp = i / beams;
             const topsideboard = topboard.clone().lerp(bottomboard, lerp).clone();
-            const bottomsideboard = topfloorboard.clone().lerp(bottomfloorboard,  lerp).clone();
+            const bottomsideboard = topfloorboard.clone().lerp(bottomfloorboard, lerp).clone();
 
             let alpha = 0;
             if (i !== 1) {
                 alpha = i / 10;
             }
             graphics.fillStyle(0x663300, alpha);
-            this.drawRect(prevTop, prevCorner, topsideboard, bottomsideboard);
+            graphics.fillPoints([prevTop, prevCorner, bottomsideboard, topsideboard], true);
+            graphics.strokePath();
 
             graphics.fillStyle(0x996633, 1);
             prevTop = topsideboard;
             prevCorner = bottomsideboard;
         }
-        this.closePath();
-
-    }
-    private drawRect(top, side, bottom, bottomSide) {
-        const { graphics } = this;
-        graphics.beginPath();
-        graphics.moveTo(top.x, top.y);
-
-        graphics.lineTo(side.x, side.y);
-        graphics.lineTo(bottomSide.x, bottomSide.y);
-
-        graphics.lineTo(bottom.x, bottom.y);
-        this.closePath();
-    }
-    private closePath() {
-        const {graphics} = this;
-        graphics.fillPath();
-        graphics.closePath();
-        graphics.strokePath();
-    }
-    private getlineOnHalfOf(top, bottom, floorTop, floorBottom) {
-        const middle = lineIntersect(top, floorBottom, bottom, floorTop);
-        const halftop = new Vector2(middle.x, top.y);
-        const halfbottom = new Vector2(middle.x, bottom.y);
-        const a = lineIntersect(middle, halftop, top, floorTop);
-        const b = lineIntersect(middle, halfbottom, bottom, floorBottom);
-        return {a, b};
     }
 }
 

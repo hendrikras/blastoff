@@ -1,4 +1,4 @@
-import {Input, GameObjects, Physics, Types} from 'phaser';
+import {Input, GameObjects, Physics, Types, Scene} from 'phaser';
 
 import Crate from '../gameobjects/Crate';
 import Enemy from '../gameobjects/Enemy';
@@ -6,6 +6,7 @@ import Player from '../gameobjects/Player';
 import Wall from '../gameobjects/Wall';
 import {getGameWidth, getGameHeight, collidesOnAxes, blockedInDirection, reachedBound} from '../helpers';
 import EventEmitter = Phaser.Events.EventEmitter;
+import Vector2 = Phaser.Math.Vector2;
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -49,24 +50,13 @@ export class GameScene extends Phaser.Scene {
     this.gravitySpeed = this.gridUnit * 2;
     this.data.set('gridUnit', this.gridUnit);
     this.data.set('short', measureShort);
-    const thickness = this.gridUnit * 5;
-    const color = 0x997fff;
-    const alpha = 1;
-    this.graphics = this.physics.scene.add.graphics();
-    this.graphics.lineStyle(thickness, color, alpha);
-    this.graphics.fillStyle(color);
-    this.graphics.setDepth(1);
 
     const getSize = (input: boolean) => input ? measureLong : measureShort;
     let startX = measureX - getSize(isLandscape);
     startX = startX === 0 ? 0 : startX / 2;
     let startY = measureY - getSize(!isLandscape);
     startY = startY === 0 ? 0 : startY / 2;
-    this.graphics.strokeRect( startX + this.gridUnit * 2.5, startY + this.gridUnit * 2.5, getSize(isLandscape) - this.gridUnit * 2.5, getSize(!isLandscape) - this.gridUnit * 2.5);
-    this.graphics.fillRect( 0, 0, startX, startY);
-
     // create the biggest world that will fit on this screen.
-
     this.background = this.physics.scene.add.tileSprite(getGameWidth(this) / 2, getGameHeight(this) / 2, getGameWidth(this), getGameHeight(this), 'stars');
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
     setBounds(this.physics.world);
@@ -77,32 +67,41 @@ export class GameScene extends Phaser.Scene {
       classType: Crate, // This is the class we created
       active: true,
       visible: true,
-      repeat: 9,
+      repeat: 0,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
-      setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
+      // setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
       key: 'crates',
     };
     this.crates = this.physics.add.group(crateConfig);
-    // this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
-    const {left, right, top, bottom, height, width} = this.physics.world.bounds;
-    const half = this.gridUnit * 2.6;
+    this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
+    const {left, right, top, bottom, height, width, centerX, centerY} = this.physics.world.bounds;
+    const quarterCrate = this.gridUnit * 2.6;
 
-    this.prison = new Crate(this, 0 , Phaser.Math.Between(top + half , bottom - half), 'prison');
-
+    // this.prison = new Crate(this, 0 , Phaser.Math.Between(top + half , bottom - half), 'prison');
+    // const wall = new Crate(this, this.physics.world.bounds.centerX , 0, 'stars', new Vector2(this.gridUnit * 100, this.gridUnit * 100));
+    // wall.setScale(0.5);
+    // wall.setDepth(-1);
+    // wall.update();
     this.prison.setScale(this.gridUnit / 15 );
     this.prison.name = 'prison';
     this.prison.depth = 2;
 
     this.crates.add(this.prison);
 
-    // const wall = new Wall(this, 0, 0 , 100, 100, 0xfffffff);
-    const graphics = this.add.graphics();
-    // const r2 = new Wall(this, left, top, this.gridUnit, height * 2, 0x9966ff);
-    // r2.update();
-    graphics.clear();
-    graphics.clearAlpha();
-    // this.graphics.clearBeforeRender
+    // const wall = new Wall(this, 0 , 0, 'prison', new Vector2(2,4));
+    const wallcolor = 0xc0bdc3;
+    const edge = quarterCrate / 2;
+    const walltop = new Wall(this, centerX, top - edge / 2 , width, edge, quarterCrate * 4, wallcolor);
+    const wallbottom = new Wall(this, centerX, bottom + edge / 2 , width, edge, quarterCrate * 4, wallcolor);
+    const wallleft = new Wall(this, left - edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
+    const wallright = new Wall(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
+    const walls = [walltop, wallbottom, wallleft, wallright];
+    walls.forEach((w) => w.update());
+
+    const cube = new Wall(this, centerY, centerX, quarterCrate * 4, quarterCrate * 4, quarterCrate * 4, wallcolor);
+    this.crates.add(cube);
+
     this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');
     this.rocket.setScale( this.gridUnit / 15);
     this.rocket.setDepth(1);
@@ -123,22 +122,13 @@ export class GameScene extends Phaser.Scene {
     this.fallingCrates = [];
     this.crates.children.iterate((crate: Crate, idx: number) => {
       crate.name = `crate${idx}`;
-      crate.setX(Phaser.Math.Between(left + half , right - half));
+      crate.setRandomPosition(startX, startY, width, height);
       this.fallingCrates.push(crate);
     });
     this.boundedCrates = [];
-
+    this.updatePerspectiveDrawing();
     this.physics.world.on('worldbounds', (body /*, up, down, left, right*/) => {
-      this.cratesPreRenderEvent = this.physics.scene.game.events.on('prerender', (/*renderer, time, delta*/) => {
-        if (this.rocket.visible) {
-          this.crates.children.iterate((crate: Crate, idx: number) => {
-            crate.update();
-          });
-        } else {
-          body.gameObject.update();
-        }
-        this.cratesPreRenderEvent.removeAllListeners();
-      }, this);
+      this.updatePerspectiveDrawing(body);
     });
   }
   public update(time) {
@@ -154,12 +144,25 @@ export class GameScene extends Phaser.Scene {
 
     if (this.player.isMoving() ) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
-      this.enemy.exterminate(pos);
+      // this.enemy.exterminate(pos);
     }
 
     this.player.update();
     this.enemy.update();
 
+  }
+  private updatePerspectiveDrawing(body = null) {
+    this.cratesPreRenderEvent = this.physics.scene.game.events.on('prerender', (renderer, time) => {
+      if (body) {
+        body.gameObject.update();
+      } else {
+        this.crates.children.iterate((crate: Crate, idx: number) => {
+          // console.log(time);
+          crate.update();
+        });
+      }
+      this.cratesPreRenderEvent.removeAllListeners();
+    }, this);
   }
   private endGame(won: boolean = false) {
     this.add.text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'you win' : 'game over').setFontSize(this.gridUnit * 5);
@@ -199,7 +202,6 @@ export class GameScene extends Phaser.Scene {
   private blastOff() {
     this.rocket.visible = false;
     this.rocketCollider.destroy();
-    // const gravity = 25000;
     this.backgoundInc = 10;
     this.physics.add.overlap(this.prison, this.enemy, () => {
         this.endGame(true);
