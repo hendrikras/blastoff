@@ -8,6 +8,8 @@ import {getGameWidth, getGameHeight, collidesOnAxes, blockedInDirection, reached
 import EventEmitter = Phaser.Events.EventEmitter;
 import Vector2 = Phaser.Math.Vector2;
 import PerspectiveObject from '../gameobjects/PerspectiveMixin';
+import CrateFace from '../gameobjects/CrateFace';
+import PrisonFace from '../gameobjects/PrisonFace';
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -63,13 +65,14 @@ export class GameScene extends Phaser.Scene {
 
     const tiles = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, width, height, 'tile');
     tiles.setTileScale(this.gridUnit / 7);
-    const CrateType =  PerspectiveObject(Crate);
+    const CrateType =  PerspectiveObject(CrateFace(Crate));
+    const Prison =  PerspectiveObject(PrisonFace(Crate));
 
     const crateConfig = {
       classType: CrateType, // This is the class we created
       active: true,
       visible: true,
-      repeat: 9,
+      repeat: 0,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
       // setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
@@ -77,7 +80,7 @@ export class GameScene extends Phaser.Scene {
     };
     this.crates = this.physics.add.group(crateConfig);
 
-    this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
+    this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
     const quarterCrate = this.gridUnit * 2.6;
 
     // this.prison = new Crate(this, 0 , Phaser.Math.Between(top + half , bottom - half), 'prison');
@@ -85,11 +88,11 @@ export class GameScene extends Phaser.Scene {
     // wall.setScale(0.5);
     // wall.setDepth(-1);
     // wall.update();
-    this.prison.setScale(this.gridUnit / 15 );
-    this.prison.name = 'prison';
+    this.prison.setScale(this.gridUnit / 14.1 );
+
     this.prison.depth = 2;
 
-    this.crates.add(this.prison);
+    // this.crates.add(this.prison);
     const CubeType = PerspectiveObject(Wall);
 
     // const wall = new Wall(this, 0 , 0, 'prison', new Vector2(2,4));
@@ -129,8 +132,12 @@ export class GameScene extends Phaser.Scene {
     this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
     this.fallingCrates = [];
     this.crates.children.iterate((crate: Crate, idx: number) => {
-      crate.name = `crate${idx}`;
-      crate.setRandomPosition(startX, startY, width, height);
+      console.log(crate.name);
+      if (crate.name !== 'prison') {
+        crate.setRandomPosition(startX, startY, width, height);
+      } else {
+        crate.name = `crate${idx}`;
+      }
       this.fallingCrates.push(crate);
     });
     this.boundedCrates = [];
@@ -175,6 +182,7 @@ export class GameScene extends Phaser.Scene {
   private endGame(won: boolean = false) {
     this.add.text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'you win' : 'game over').setFontSize(this.gridUnit * 5);
     this.physics.pause();
+    this.scene.pause();
   }
   private dropEverything() {
     const blockedCrates = [];
@@ -214,6 +222,8 @@ export class GameScene extends Phaser.Scene {
     this.rocketCollider.destroy();
     this.backgoundInc = 10;
     this.physics.add.overlap(this.prison, this.enemy, () => {
+        this.enemy.x = this.prison.x;
+        this.enemy.y = this.prison.y;
         this.endGame(true);
     });
 

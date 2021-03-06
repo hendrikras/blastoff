@@ -20,8 +20,8 @@ class Wall extends Phaser.GameObjects.Rectangle {
        this.color = color;
        this.depth = 1;
        this.key = 'wall';
+       this.name = this.key;
        this.point = new Vector2(0, 0);
-       // this.setStrokeStyle(3, 0x000, 1);
        this.graphics = scene.add.graphics();
        const height = getGameHeight(scene);
        const width = getGameWidth(scene);
