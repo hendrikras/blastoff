@@ -7,6 +7,7 @@ import Wall from '../gameobjects/Wall';
 import {getGameWidth, getGameHeight, collidesOnAxes, blockedInDirection, reachedBound} from '../helpers';
 import EventEmitter = Phaser.Events.EventEmitter;
 import Vector2 = Phaser.Math.Vector2;
+import PerspectiveObject from '../gameobjects/PerspectiveMixin';
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -28,8 +29,6 @@ export class GameScene extends Phaser.Scene {
   private fallingCrates: Crate[];
   private boundedCrates: Crate[];
   private enemyCollider: Phaser.Physics.Arcade.Collider;
-  private enemyCratesCollider: Phaser.Physics.Arcade.Collider;
-  private graphics;
   private background;
   private backgoundInc: number = 0;
   private gravitySpeed: number;
@@ -60,22 +59,25 @@ export class GameScene extends Phaser.Scene {
     this.background = this.physics.scene.add.tileSprite(getGameWidth(this) / 2, getGameHeight(this) / 2, getGameWidth(this), getGameHeight(this), 'stars');
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
     setBounds(this.physics.world);
-    const tiles = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, getSize(isLandscape), getSize(!isLandscape), 'tile');
+    const {left, right, top, bottom, height, width, centerX, centerY} = this.physics.world.bounds;
+
+    const tiles = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, width, height, 'tile');
     tiles.setTileScale(this.gridUnit / 7);
+    const CrateType =  PerspectiveObject(Crate);
 
     const crateConfig = {
-      classType: Crate, // This is the class we created
+      classType: CrateType, // This is the class we created
       active: true,
       visible: true,
-      repeat: 0,
+      repeat: 9,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
       // setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
       key: 'crates',
     };
     this.crates = this.physics.add.group(crateConfig);
+
     this.prison = this.physics.add.sprite(measureShort / 2, this.physics.world.bounds.bottom - measureShort / 20, 'prison');
-    const {left, right, top, bottom, height, width, centerX, centerY} = this.physics.world.bounds;
     const quarterCrate = this.gridUnit * 2.6;
 
     // this.prison = new Crate(this, 0 , Phaser.Math.Between(top + half , bottom - half), 'prison');
@@ -88,21 +90,24 @@ export class GameScene extends Phaser.Scene {
     this.prison.depth = 2;
 
     this.crates.add(this.prison);
+    const CubeType = PerspectiveObject(Wall);
 
     // const wall = new Wall(this, 0 , 0, 'prison', new Vector2(2,4));
     const wallcolor = 0xc0bdc3;
     const edge = quarterCrate / 2;
-    const walltop = new Wall(this, centerX, top - edge / 2 , width, edge, quarterCrate * 4, wallcolor);
-    const wallbottom = new Wall(this, centerX, bottom + edge / 2 , width, edge, quarterCrate * 4, wallcolor);
-    const wallleft = new Wall(this, left - edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
-    const wallright = new Wall(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
+    const walltop = new CubeType(this, centerX, top - edge / 2 , width, edge, quarterCrate * 4, wallcolor);
+    const wallbottom = new CubeType(this, centerX, bottom + edge / 2 , width, edge, quarterCrate * 4, wallcolor);
+    const wallleft = new CubeType(this, left - edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
+    const wallright = new CubeType(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
     const walls = [walltop, wallbottom, wallleft, wallright];
-    walls.forEach((w) => {
+    walls.forEach((w: Wall) => {
       w.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
       w.update() ;
     });
 
-    const cube = new Wall(this, centerY, centerX, quarterCrate * 4, quarterCrate * 4, quarterCrate * 4, wallcolor);
+    const cube = new CubeType(this, centerY, centerX, quarterCrate * 4, quarterCrate * 4, quarterCrate * 4, 0xfff) as Wall;
+    cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
+
     this.crates.add(cube);
 
     this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');

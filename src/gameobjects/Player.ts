@@ -1,10 +1,9 @@
-import { Physics, Types, GameObjects } from 'phaser';
+import { Physics, Types } from 'phaser';
 import { collidesOnAxes, impassable } from '../helpers';
 
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
-import Sprite = Phaser.GameObjects.Sprite;
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -12,7 +11,7 @@ export default class Player extends CollidesWithObjects {
     private cursorKeys: Types.Input.Keyboard.CursorKeys;
     private pace: number = 30;
     private crates: Crate[];
-    public factor: number = (this.pace / 10) * 2.5;
+    private factor: number = (this.pace / 10) * 2.5;
     private worldBounds: ArcadeBodyBounds;
 
     constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, scale) {

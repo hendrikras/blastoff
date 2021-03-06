@@ -84,3 +84,5 @@ export function gcd(x, y) {
     const cb = (a, b) => (b === 0 ? a : cb(b, a % b));
     return cb(Math.abs(x), Math.abs(y));
 }
+
+export type Constructor<T = {}> = new (...args: any[]) => T;

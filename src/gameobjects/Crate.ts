@@ -1,27 +1,26 @@
 import { Input, Physics, Math as PMath, Types, Scene, Geom } from 'phaser';
-// import Player from './Player';
-import Enemy from './Enemy';
-import { getGameWidth, getGameHeight, lineIntersect} from '../helpers';
+import { getGameWidth, getGameHeight} from '../helpers';
 import Vector2 = Phaser.Math.Vector2;
+import Enemy from './Enemy';
 
 class Crate extends Physics.Arcade.Sprite {
-  get enemy(): Enemy {
-    return this.$enemy;
-  }
-  set enemy(value: Enemy) {
-    this.$enemy = value;
-  }
-  get player(): boolean {
-    return this.$player;
-  }
-  set player(value: boolean) {
-    this.$player = value;
+    get enemy(): Enemy {
+        return this.$enemy;
+    }
+    set enemy(value: Enemy) {
+        this.$enemy = value;
+    }
+    get player(): boolean {
+        return this.$player;
+    }
+    set player(value: boolean) {
+        this.$player = value;
 
-  }
-  private $player: boolean = false;
-  private $enemy?: Enemy = null;
+    }
+    private $player: boolean = false;
+    private $enemy?: Enemy = null;
+
   private graphics;
-  private graphics2;
   private vanishPoint: PMath.Vector2;
   private MeasurePointY1: PMath.Vector2;
   private MeasurePointY2: PMath.Vector2;
@@ -32,8 +31,7 @@ class Crate extends Physics.Arcade.Sprite {
   private screenHeight: number;
   private key;
   private gridUnit: number;
-  private centerCubeToEdge: Vector2;
-    private  function;    constructor(scene: Scene, x: number , y: number, name, dimensions: Vector2) {
+    constructor(scene: Scene, x: number , y: number, name) {
        super(scene, x, y, name);
 
        scene.add.existing(this);
@@ -44,7 +42,6 @@ class Crate extends Physics.Arcade.Sprite {
        // @ts-ignore
        this.body.onWorldBounds = true;
        this.graphics = scene.add.graphics();
-       this.graphics2 = scene.add.graphics();
        const height = getGameHeight(scene);
        const width = getGameWidth(scene);
        this.screenHeight = height;
@@ -67,79 +64,25 @@ class Crate extends Physics.Arcade.Sprite {
        this.MeasurePointX2 = new PMath.Vector2(this.vanishPoint.x - val, this.vanishPoint.y);
        // this mystery value will take us to the edge of the cube
        this.gridUnit = scene.data.get('gridUnit');
-       const xy = this.gridUnit * 2.6;
-       this.centerCubeToEdge = new Vector2(xy, xy);
-       if (dimensions) {
-            this.dimensions = dimensions;
-        } else {
-           this.dimensions = new Vector2(2,2);
-        }
-
-   }
-   public update() {
-       const { x, y, centerCubeToEdge, graphics, mp, vanishPoint } = this;
-       this.point.x = x;
-       this.point.y = y;
-
-       // there is a lot of calculus going on here in order to achieve the 3d 'effect'.
-       // the reason why not to use hardware accelarated libs (Three.js), like a sane person would do is because all that is required is a 'one point perspective' 3d on very simple geomitry (cube).
-       // and working with meshes in phaser is still to buggy at this point in time
-       // So this should still be simple enough for phaser to handle.
-       graphics.clear();
-
-      // mirror everything once past the vanishing point (center)
-       const xFactor = this.pastCenter('x') ? -centerCubeToEdge.x : centerCubeToEdge.x;
-       const yFactor = this.pastCenter('y') ? -centerCubeToEdge.y : centerCubeToEdge.y;
-
-      // this is either topleft of topright depending on whether crate is positioned on the left of right side of the screen
-       const top = new PMath.Vector2(x + xFactor * 2, y - xFactor * 2);
-       const bottom = new PMath.Vector2(x + xFactor * 2, y + xFactor * 2);
-      // this is either bottomleft of topright depending on whether crate is positioned on the top of bottom side of the screen
-       const blotr = new PMath.Vector2(x - yFactor * 2 , y + yFactor * 2);
-       const brotl = new PMath.Vector2(x + yFactor * 2, y + yFactor * 2);
-
-      // draw a line towards the center of the screen, but stop when it intersects with a measure point (imaginary) line
-       const floorBottom = lineIntersect(vanishPoint, bottom, top, mp(this.pastCenter('x'), 'Y'));
-       const floorTop = lineIntersect(vanishPoint, top, bottom, mp(!this.pastCenter('x'), 'Y'));
-
-       const intersect3 = lineIntersect(vanishPoint, blotr, brotl, mp(!this.pastCenter('y'), 'X'));
-       const intersect4 = lineIntersect(vanishPoint, brotl, blotr, mp(this.pastCenter('y'), 'X'));
-
-       // setting the depth of the 3d effect is based on a 'magic' value that is based on distance to the center
-       // closer to center is higher but never bigger than 2
-       const magicZ = (1000 - this.vanishPoint.distance( this.point))  / 1000 + 1;
-
-       graphics.setDepth(magicZ);
-
-       // x face
-       this.drawFace(top, bottom, floorTop, floorBottom);
-       // y face
-       this.drawFace(blotr, brotl, intersect3, intersect4);
-       // const size = 500;
-       // const start = 0;
-       // const t = new Vector2(start, start);
-       // const b = new Vector2(size, start);
-       // const ft = new Vector2(start, size);
-       // const fb = new Vector2(size, size);
-       // this.drawFace(t, b, ft, fb);
-
-   }
-   private mp = (cond: boolean, axis: string) => cond ? this[`MeasurePoint${axis}1`] : this[`MeasurePoint${axis}2`];
-    private pastCenter = (axis: string) => this[axis] > this.vanishPoint[axis];
+       const xy = (this.gridUnit * 2.6) * 4;
+       this.dimensions = new Vector2(xy, xy);
+        // @ts-ignore
+       this.drawPoints = this.drawFace;
+    }
     private drawFace(top, bottom, floorTop, floorBottom) {
         // this will draw a simple crate 'texture'
         // as phaser seems to have lost the ability to draw a texture on the graphics game object in 3.5x.
         const { graphics } = this;
-
+        const magicZ = (1000 - this.vanishPoint.distance( this.point))  / 1000 + 1;
+        graphics.setDepth(magicZ);
         graphics.fillStyle(0x996633, 1);
 
         graphics.lineStyle(3, 0x663300, 2);
         const divide = 1 / 5;
-        const divide2 = 4 / 5;
         const topboard = top.clone().lerp(floorTop, divide).clone();
         const bottomboard = bottom.clone().lerp(floorBottom, divide).clone();
-        const topfloorboard = top.clone().lerp(floorTop, divide2).clone();
-        const bottomfloorboard = bottom.clone().lerp(floorBottom, divide2).clone();
+        const topfloorboard = floorTop.clone().lerp(top, divide).clone();
+        const bottomfloorboard = floorBottom.clone().lerp(bottom, divide).clone();
         graphics.fillPoints([top, bottom, bottomboard, topboard], true);
         graphics.strokePath();
 
