@@ -1,6 +1,7 @@
 import {Scene, Math as PMath} from 'phaser';
 import {Constructor, lineIntersect} from '../helpers';
 import Vector2 = Phaser.Math.Vector2;
+import Wall from './Wall';
 
 export default <TBase extends Constructor>(Base: TBase) =>
 class extends Base {
@@ -30,11 +31,10 @@ class extends Base {
        const floorBottom = lineIntersect(vanishPoint, bottom, top, mp(this.pastCenter('y'), 'Y'));
        const floorTop = lineIntersect(vanishPoint, top, bottom, mp(!this.pastCenter('y'), 'Y'));
        const intersect3 = lineIntersect(vanishPoint, blotr, brotl, mp(!this.pastCenter('x'), 'X'));
-       // const intersect4 = lineIntersect(vanishPoint, brotl, blotr, mp(this.pastCenter('x'), 'X'));
       // x face
        graphics.fillStyle(this.color, 1);
 
-       if (vanishPoint.distance(top) > vanishPoint.distance(blotr) ) {
+       if ((this as unknown as Wall).name === 'wall' && vanishPoint.distance(top) > vanishPoint.distance(blotr) ) {
            this.calcDrawDir(top, bottom, floorTop, floorBottom, 'y');
            this.calcDrawDir(blotr, brotl, intersect3, floorBottom, 'x');
        } else {
