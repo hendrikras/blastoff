@@ -67,6 +67,7 @@ export class GameScene extends Phaser.Scene {
     tiles.setTileScale(this.gridUnit / 7);
     const CrateType =  PerspectiveObject(CrateFace(Crate));
     const Prison =  PerspectiveObject(PrisonFace(Crate));
+    const PlayerType = PerspectiveObject(Player);
 
     const crateConfig = {
       classType: CrateType, // This is the class we created
@@ -113,16 +114,15 @@ export class GameScene extends Phaser.Scene {
 
     this.crates.add(cube);
 
-    this.rocket = this.physics.add.sprite(measureShort / 2, measureShort / 20, 'rocket');
+    this.rocket = this.physics.add.sprite(centerX, top + quarterCrate * 2, 'rocket');
     this.rocket.setScale( this.gridUnit / 15);
     this.rocket.setDepth(1);
 
     this.crates.add(this.prison);
     this.crates.setDepth(3);
-    this.player = new Player({scene: this, x: measureLong / 2, y: measureShort / 2}, this.gridUnit, this.crates, 32, this.gridUnit / 4);
+    this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, 32, this.gridUnit / 4);
     this.player.setDepth(2);
-
-    this.enemy = new Enemy({scene: this, x: measureLong / 2, y: 100}, this.gridUnit, 512, this.gridUnit / 64);
+    this.enemy = new Enemy({scene: this, x: centerX, y: top + quarterCrate * 2}, this.gridUnit, 512, this.gridUnit / 64);
     this.enemy.setDepth(2);
     // @ts-ignore
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
@@ -222,9 +222,12 @@ export class GameScene extends Phaser.Scene {
     this.rocketCollider.destroy();
     this.backgoundInc = 10;
     this.physics.add.overlap(this.prison, this.enemy, () => {
-        this.enemy.x = this.prison.x;
-        this.enemy.y = this.prison.y;
-        this.endGame(true);
+
+        // if (this.enemy.y <= this.physics.world.bounds.bottom - this.enemy.height){
+          this.endGame(true);
+          this.enemy.x = this.prison.x;
+          this.enemy.y = this.prison.y;
+        // }
     });
 
   }

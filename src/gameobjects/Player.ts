@@ -18,8 +18,10 @@ export default class Player extends CollidesWithObjects {
         super(config.scene, config.x, config.y, size, scale);
 
         const sprite = config.scene.add.sprite(0, 0 , 'man');
+        const spritebottom = config.scene.add.sprite(0, this.gridUnit * 10 , 'man');
 
         this.add(sprite);
+        this.add(spritebottom);
 
         this.crates = crates.children.getArray() as Crate[];
         this.speed = gridUnit * this.pace;
@@ -71,6 +73,8 @@ export default class Player extends CollidesWithObjects {
         // We normalize the velocity so that the player is always moving at the same speed, regardless of direction.
         const normalizedVelocity = velocity.normalize();
         (this as any).body.setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
+        //@ts-ignore
+        // this.draw();
       }
     public crateCollider = (me: Player, crate: Crate) => {
 
