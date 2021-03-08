@@ -14,6 +14,13 @@ class extends Base {
   private MeasurePointY2: PMath.Vector2;
   private MeasurePointX1: PMath.Vector2;
   private MeasurePointX2: PMath.Vector2;
+  private top: PMath.Vector2;
+  private bottom: PMath.Vector2;
+  private left: PMath.Vector2;
+  private right: PMath.Vector2;
+  private floorTop: PMath.Vector2 | null;
+  private floorBottom: PMath.Vector2 | null;
+  private corner: PMath.Vector2 | null;
   private dimensions: PMath.Vector2;
   private point: PMath.Vector2;
   private key;
@@ -29,7 +36,7 @@ class extends Base {
         const {physics: {world: {bounds: {left, right, top, bottom, height, width, centerX, centerY}}}} = scene;
         const val = (left - right);
         this.vanishPoint = new PMath.Vector2(centerX, centerY);
-        if (typeof args[3] === 'number') { // toDo: make this distinction based on type
+        if (this instanceof Wall) {
             const w = args[3];
             const h = args[4];
             const d = args[5];
@@ -61,26 +68,30 @@ class extends Base {
        const xFactor = this.pastCenter('x') ? -xhalf : xhalf;
        const yFactor = this.pastCenter('y') ? -yhalf : yhalf;
 
-       const top = new PMath.Vector2(x + xFactor, y - yFactor);
-       const bottom = new PMath.Vector2(x + xFactor, y + yFactor);
+       this.top = new PMath.Vector2(x + xFactor, y - yFactor);
+       this.bottom = new PMath.Vector2(x + xFactor, y + yFactor);
        // this is either bottomleft of topright depending on whether crate is positioned on the top of bottom side of the screen
-       const blotr = new PMath.Vector2(x - xFactor , y + yFactor);
-       const brotl = new PMath.Vector2(x + xFactor, y + yFactor);
+       this.left = new PMath.Vector2(x - xFactor , y + yFactor);
+       this.right = new PMath.Vector2(x + xFactor, y + yFactor);
 
+       const { left, right, top, bottom } = this;
       // draw a line towards the center of the screen, but stop when it intersects with a measure point (imaginary) line
-       const floorBottom = lineIntersect(vanishPoint, bottom, top, mp(this.pastCenter('y'), 'Y'));
-       const floorTop = lineIntersect(vanishPoint, top, bottom, mp(!this.pastCenter('y'), 'Y'));
-       const intersect3 = lineIntersect(vanishPoint, blotr, brotl, mp(!this.pastCenter('x'), 'X'));
-      // x face
-       graphics.fillStyle(this.color, 1);
+       this.floorBottom = lineIntersect(vanishPoint, bottom, top, mp(this.pastCenter('y'), 'Y'));
+       this.floorTop = lineIntersect(vanishPoint, top, bottom, mp(!this.pastCenter('y'), 'Y'));
+       this.corner = lineIntersect(vanishPoint, left, right, mp(!this.pastCenter('x'), 'X'));
+       const { floorTop, floorBottom, corner } = this;
 
-       if ((this as unknown as Wall).name === 'wall' && vanishPoint.distance(top) > vanishPoint.distance(blotr) ) {
-           this.calcDrawDir(top, bottom, floorTop, floorBottom, 'y');
-           this.calcDrawDir(blotr, brotl, intersect3, floorBottom, 'x');
-       } else {
-           this.calcDrawDir(blotr, brotl, intersect3, floorBottom, 'x');
-           this.calcDrawDir(top, bottom, floorTop, floorBottom, 'y');
-       }
+       // x face
+       graphics.fillStyle(this.color, 1);
+       // if (this.key === 'crates' || this.key === 'wall') {
+           if ( vanishPoint.distance(top) > vanishPoint.distance(left)) {
+               this.calcDrawDir(top, bottom, floorTop, floorBottom, 'y');
+               this.calcDrawDir(left, right, corner, floorBottom, 'x');
+           } else {
+               this.calcDrawDir(left, right, corner, floorBottom, 'x');
+               this.calcDrawDir(top, bottom, floorTop, floorBottom, 'y');
+           }
+       // }
    }
     private setMeasurePoints(offsetX, offsetY) {
         // measurepoints are placed on the horizon line of the vanishpoint,
@@ -113,3 +124,17 @@ class extends Base {
     private pastCenter = (axis: string) => this[axis] > this.vanishPoint[axis];
     private  mp = (cond: boolean, axis: string) => cond ? this[`MeasurePoint${axis}1`] : this[`MeasurePoint${axis}2`];
 };
+
+export interface PerspectiveMixinType  {
+    top: PMath.Vector2;
+    bottom: PMath.Vector2;
+    left: PMath.Vector2;
+    right: PMath.Vector2;
+    corner: PMath.Vector2;
+    floorTop: PMath.Vector2;
+    floorBottom: PMath.Vector2;
+    dimensions: PMath.Vector2;
+    point: PMath.Vector2;
+    x: number;
+    y: number;
+}

@@ -1,6 +1,8 @@
 import { Physics, Types, GameObjects } from 'phaser';
 import Crate from './Crate';
-export default class CollidesWithObjects extends GameObjects.Container {
+import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
+
+export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
     protected pushedCrate: Crate;
     protected gridUnit: number;
@@ -8,14 +10,14 @@ export default class CollidesWithObjects extends GameObjects.Container {
     protected yThreshold: number;
     protected blockedDirection: Types.Physics.Arcade.ArcadeBodyCollision = { up: false, down: false, right: false, left: false, none: true };
     constructor(scene, x: number, y: number, size: number, scale: number) {
-        super(scene, x, y, null);
-        this.setSize(size, size);
+        super(scene, x, y, size, size);
 
+        // constructor(scene, x, y, width, height, children) {
+        //     super(scene, x, y, width, height, children);
+        // this.setSize(size, size);
         scene.add.existing(this);
         scene.physics.world.enable(this);
-        this.setScale(scale);
-
-        (this.body as Physics.Arcade.Body).setCollideWorldBounds(true);
+        // this.setScale(scale);
 
     }
     public pushCrate = (dir: string, crate: Crate) => console.error('not implemented!');
