@@ -2,10 +2,10 @@ import { Physics, Math as PMath, Scene } from 'phaser';
 import Enemy from './Enemy';
 
 class Crate extends Physics.Arcade.Sprite {
-    get enemy(): Enemy {
+    get enemy(): Enemy | undefined {
         return this.$enemy;
     }
-    set enemy(value: Enemy) {
+    set enemy(value: Enemy | undefined) {
         this.$enemy = value;
     }
     get player(): boolean {
@@ -16,7 +16,7 @@ class Crate extends Physics.Arcade.Sprite {
 
     }
     private $player: boolean = false;
-    private $enemy?: Enemy = null;
+    private $enemy?: Enemy = undefined;
     constructor(scene: Scene, x: number , y: number, name) {
        super(scene, x, y, name);
 

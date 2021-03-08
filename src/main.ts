@@ -18,17 +18,15 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
   physics: {
     default: 'arcade',
     arcade: {
-      // debug: true,
+      debug: true,
     },
   },
 
-    plugins: {
-      global: [{
-          key: 'rexContainerLitePlugin',
-          plugin: ContainerLitePlugin,
-          start: true,
-      }],
-    },
+      plugins: {
+        global: [
+          { key: 'rexContainerLitePlugin', plugin: ContainerLitePlugin, start: true },
+        ],
+      },
 
   parent: 'game',
   backgroundColor: '#000000',

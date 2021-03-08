@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "phaser": "^3.23.0",
-    "phaser3-rex-plugins": "^1.1.15"
+    "phaser3-rex-plugins": "^1.1.41"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^4.6.0",

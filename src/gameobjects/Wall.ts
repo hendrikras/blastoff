@@ -12,7 +12,7 @@ class Wall extends Phaser.GameObjects.Rectangle {
        this.name = this.key;
 
       // @ts-ignore
-      this.update = this.draw;
+       this.update = this.draw;
    }
 }
 

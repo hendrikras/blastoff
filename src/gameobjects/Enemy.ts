@@ -1,17 +1,23 @@
 import { Math, Physics, GameObjects } from 'phaser';
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
+import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 
 export default class Enemy extends CollidesWithObjects {
     private readonly speed: number = 0;
     private playersCrate: Crate;
     private $chasePlayer: boolean = true;
+    private blankEnemy: Enemy;
 
     constructor(config, gridUnit: number, size: number, scale: number) {
         super(config.scene, config.x, config.y, size, scale);
+        const that = this as ContainerLite;
+        const sprite = config.scene.add.sprite(config.x, config.y, 'enemy');
 
-        const sprite = config.scene.add.sprite(0, 0, 'enemy');
-        this.add(sprite);
+        that.add(sprite);
+        that.body.setCollideWorldBounds(true);
+
+        that.setScale(scale, scale);
         this.speed = gridUnit * 20;
         this.gridUnit = gridUnit / 10;
         sprite.setFrame(1);
@@ -39,7 +45,7 @@ export default class Enemy extends CollidesWithObjects {
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
         if (this.pushedCrate && this.playersCrate !== crate) {
-            this.pushedCrate.enemy = null;
+            this.pushedCrate.enemy = this.blankEnemy;
         }
         this.pushedCrate = crate;
         this.blockedDirection.none = false;
@@ -52,7 +58,7 @@ export default class Enemy extends CollidesWithObjects {
           const that = (this as unknown as GameObjects.Container);
           if (this.pushedCrate) {
             if (this.pushedCrate.x - that.x > this.pushedCrate.height || this.pushedCrate.y - that.y > this.pushedCrate.height) {
-                this.pushedCrate.enemy = null;
+                this.pushedCrate.enemy = this.blankEnemy;
             }
         }
       }
