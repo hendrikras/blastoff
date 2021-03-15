@@ -121,7 +121,7 @@ export class GameScene extends Phaser.Scene {
 
     this.crates.add(this.prison);
     this.crates.setDepth(3);
-    this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, 32, this.gridUnit / 14);
+    this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, 48, this.gridUnit / 14);
     this.player.setDepth(2);
     this.enemy = new Enemy({scene: this, x: centerX, y: top + quarterCrate * 2}, this.gridUnit, 512, this.gridUnit / 64);
     this.enemy.setDepth(2);

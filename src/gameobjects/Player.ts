@@ -5,11 +5,14 @@ import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 import Sprite = Phaser.Physics.Arcade.Sprite;
-import Vector2 = Phaser.Math.Vector2;
-import Enemy from './Enemy';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import {PerspectiveMixinType} from './PerspectiveMixin';
-import Group = Phaser.GameObjects.Group;
+import Circle = Phaser.Geom.Circle;
+import CubicBezier = Phaser.Curves.CubicBezier;
+import Vector2 = Phaser.Math.Vector2;
+import Graphics = Phaser.GameObjects.Graphics;
+import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
+import Normalize = Phaser.Math.Angle.Normalize;
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -25,25 +28,29 @@ export default class Player extends CollidesWithObjects {
     private topSprite: Sprite;
     private bottomSprite: Sprite;
     private centerSprite: Sprite;
-    private blankEnemy: Enemy;
-    private blankCrate: Crate;
+    private head: Circle;
+    private shadow: Circle;
+    private color: number;
+    private path;
+    private curve;
+    private pathHelper: Circle;
 
     constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, scale) {
         super(config.scene, config.x, config.y, size, size);
         const that = this as ContainerLite;
         const {x, y} = config;
-        this.bottomSprite = config.scene.add.sprite(x, y , 'prison');
-        this.topSprite = config.scene.add.sprite(x, y , 'prison');
+        this.color = 0X0B6382;
+        const shadowColor = 0X031920;
+        this.shadow = config.scene.add.circle(x, y, size * 0.85, shadowColor, 0.4);
+        this.head = config.scene.add.circle(x, y, size, this.color);
+        this.pathHelper = config.scene.add.circle(x, y, size * 0.85, this.color);
+        that.add(this.shadow);
+        that.add(this.head);
 
-        // this.centerSprite = config.scene.add.sprite(x, y , 'man');
-
-        that.add(this.topSprite);
-        that.add(this.bottomSprite);
-        // console.log((this as any).children);
         that.setScale(scale, scale);
-        that.body.setCollideWorldBounds(true);
 
-        // this.add(this.bottomSprite);
+        that.body.setCollideWorldBounds(true);
+        // that.graphics.setDepth(3);
 
         this.crates = crates.children.getArray() as Crate[];
         this.speed = gridUnit * this.pace;
@@ -65,27 +72,49 @@ export default class Player extends CollidesWithObjects {
       if (this.pushedCrate && this.pushedCrate.player) {
         this.pushedCrate.player = false;
         // if (this.pushedCrate.enemy)  this.pushedCrate.enemy.chasePlayer = true;
-        this.pushedCrate.enemy = this.blankEnemy;
+        this.pushedCrate.enemy = null;
       }
-      this.pushedCrate = this.blankCrate;
+      this.pushedCrate = null;
     }
     public update() {
         const that = this as ContainerLite;
-        const image = that.children[1] as Sprite;
-
+        that.graphics.setDepth(2);
         that.draw();
 
-        // image.x = this.top.x;
         const { scene } = that;
         const {physics: {world: {bounds: {height, width, centerX, centerY}}}} = scene;
 
-        const { corner, floorBottom, floorTop, left, right, x, y } = this as unknown as PerspectiveMixinType;
+        const { corner, floorBottom, floorTop, top, bottom, left, right, x, y } = this as unknown as PerspectiveMixinType;
+
         const centerBottom = corner.clone().lerp(floorTop, 0.5).clone();
+        that.setChildPosition(this.head, x, y);
+        that.setChildPosition(this.pathHelper, x, y);
+
+
+
 
         if (centerBottom) {
-            that.setChildPosition(this.bottomSprite, centerBottom.x, centerBottom.y);
+            that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
+            const all = 2 * 3.14159265359;
+
+            const angle = that.pastCenter('x', that.point.x) ?  BetweenPoints(this.head, that.shadow) : BetweenPoints(this.shadow, this.head);
+            // const angle = BetweenPoints(that.point, that.vanishPoint);
+            const angleN = Normalize(angle);
+            const defA = (angleN / all);
+            // const facingCenter = that.pastCenter('x', that.point.x) ? defA + 0.25 : defA - 0.25;
+            const facingCenter = defA + 0.25;
+            const mirrorA = Math.abs(facingCenter - 0.5);
+            const p1 = new Vector2(Circle.GetPoint(this.pathHelper, facingCenter));
+            const p2 = new Vector2(Circle.GetPoint(this.pathHelper, mirrorA ));
+            // console.log(defA, mirrorA);
+            const p3 = new Vector2(Circle.GetPoint(this.shadow, facingCenter)).lerp(that.vanishPoint, 0.07);
+            const p4 = new Vector2(Circle.GetPoint(this.shadow, mirrorA)).lerp(that.vanishPoint, 0.07);
+            that.graphics.fillStyle(this.color);
+            this.path = new CubicBezier(p1, p3, p4, p2);
+
+            this.path.draw(that.graphics);
+            that.graphics.fillPath();
         }
-        that.setChildPosition(this.topSprite, x, y);
 
       // re-enable moving in a certain direction if passed a blockade
         this.resetBlockedDirections();
@@ -111,9 +140,6 @@ export default class Player extends CollidesWithObjects {
           this.blockedDirection.down = false;
         }
         if (downDown && !this.blockedDirection.down) {
-            // @ts-ignore
-            // this.draw();
-
             velocity.y += 1;
             this.hasInput = true;
             this.blockedDirection.up = false;
@@ -123,7 +149,6 @@ export default class Player extends CollidesWithObjects {
         const normalizedVelocity = velocity.normalize();
         (this as any).body.setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
       }
-      // private draw(){}
     public crateCollider = (me: Player, crate: Crate) => {
 
       this.pushedCrate = crate;

@@ -2,6 +2,8 @@ import {Scene, Math as PMath} from 'phaser';
 import {Constructor, getGameHeight, getGameWidth, lineIntersect} from '../helpers';
 import Vector2 = Phaser.Math.Vector2;
 import Wall from './Wall';
+import Player from './Player';
+import Graphics = Phaser.GameObjects.Graphics;
 
 export default <TBase extends Constructor>(Base: TBase) =>
 class extends Base {
@@ -83,15 +85,15 @@ class extends Base {
 
        // x face
        graphics.fillStyle(this.color, 1);
-       // if (this.key === 'crates' || this.key === 'wall') {
-           if ( vanishPoint.distance(top) > vanishPoint.distance(left)) {
+       if (!(this instanceof Player)) {
+           if (vanishPoint.distance(top) > vanishPoint.distance(left)) {
                this.calcDrawDir(top, bottom, floorTop, floorBottom, 'y');
                this.calcDrawDir(left, right, corner, floorBottom, 'x');
            } else {
                this.calcDrawDir(left, right, corner, floorBottom, 'x');
                this.calcDrawDir(top, bottom, floorTop, floorBottom, 'y');
            }
-       // }
+       }
    }
     private setMeasurePoints(offsetX, offsetY) {
         // measurepoints are placed on the horizon line of the vanishpoint,
@@ -135,6 +137,8 @@ export interface PerspectiveMixinType  {
     floorBottom: PMath.Vector2;
     dimensions: PMath.Vector2;
     point: PMath.Vector2;
+    graphics: Graphics;
+    draw: () => void;
     x: number;
     y: number;
 }

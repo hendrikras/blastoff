@@ -4,7 +4,7 @@ import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
-    protected pushedCrate: Crate;
+    protected pushedCrate: Crate | null;
     protected gridUnit: number;
     protected xThreshold: number;
     protected yThreshold: number;
