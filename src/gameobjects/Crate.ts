@@ -1,5 +1,8 @@
 import { Physics, Math as PMath, Scene } from 'phaser';
 import Enemy from './Enemy';
+import {PerspectiveMixinType} from './PerspectiveMixin';
+import {Direction} from '../helpers';
+import Vector2 = Phaser.Math.Vector2;
 
 class Crate extends Physics.Arcade.Sprite {
     get enemy(): Enemy | null {
@@ -30,8 +33,13 @@ class Crate extends Physics.Arcade.Sprite {
 
         // @ts-ignore
        this.drawPoints = this.drawFace;
-        // @ts-ignore
-       this.update = this.draw;
+    }
+
+    public update() {
+        const that = this as unknown as PerspectiveMixinType;
+        that.graphics.clear();
+        that.predraw();
+        that.drawInView();
     }
 }
 

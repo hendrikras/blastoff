@@ -1,6 +1,7 @@
 import {Scene} from 'phaser';
 import {Direction, Collision4Direction} from '../helpers';
 import ArcadeBodyCollision = Phaser.Types.Physics.Arcade.ArcadeBodyCollision;
+import {PerspectiveMixinType} from './PerspectiveMixin';
 
 class Wall extends Phaser.GameObjects.Rectangle {
     get direction(): ArcadeBodyCollision {
@@ -18,10 +19,21 @@ class Wall extends Phaser.GameObjects.Rectangle {
        this.key = key;
        this.name = key;
        this.$direction = direction;
-
-      // @ts-ignore
-       this.update = this.draw;
    }
+
+    public update() {
+      const that = this as unknown as PerspectiveMixinType;
+      that.graphics.clear();
+
+      that.graphics.fillStyle(this.color, 1);
+      that.predraw();
+        // the walls should draw the face that is visible. for the rest the draw order is based on position.
+      if (this.direction.none) {
+        that.drawInView();
+      } else {
+          Object.entries(this.direction).forEach((value: [string, boolean]) => value[1] && that.drawVertices(that.getFaceByDirection(Direction[value[0]])) );
+      }
+    }
 }
 
 export default Wall;
