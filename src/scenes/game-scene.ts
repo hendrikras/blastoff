@@ -1,16 +1,23 @@
-import {Input, GameObjects, Physics, Types, Scene} from 'phaser';
+import {Physics, Types} from 'phaser';
 
 import Crate from '../gameobjects/Crate';
 import Enemy from '../gameobjects/Enemy';
 import Player from '../gameobjects/Player';
 import Wall from '../gameobjects/Wall';
-import {getGameWidth, getGameHeight, collidesOnAxes, blockedInDirection, reachedBound} from '../helpers';
-import EventEmitter = Phaser.Events.EventEmitter;
-import Vector2 = Phaser.Math.Vector2;
+import {
+  blockedInDirection,
+  collidesOnAxes,
+  Direction,
+  Collision4Direction,
+  getGameHeight,
+  getGameWidth,
+  reachedBound
+} from '../helpers';
 import PerspectiveObject from '../gameobjects/PerspectiveMixin';
 import CrateFace from '../gameobjects/CrateFace';
 import PrisonFace from '../gameobjects/PrisonFace';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
+import EventEmitter = Phaser.Events.EventEmitter;
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -68,13 +75,15 @@ export class GameScene extends Phaser.Scene {
     tiles.setTileScale(this.gridUnit / 7);
     const CrateType =  PerspectiveObject(CrateFace(Crate));
     const Prison =  PerspectiveObject(PrisonFace(Crate));
+    const EnemyType = PerspectiveObject(Enemy);
+
     const PlayerType = PerspectiveObject(Player);
 
     const crateConfig = {
       classType: CrateType, // This is the class we created
       active: true,
       visible: true,
-      repeat: 0,
+      repeat: 9,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
       // setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
@@ -100,30 +109,34 @@ export class GameScene extends Phaser.Scene {
     // const wall = new Wall(this, 0 , 0, 'prison', new Vector2(2,4));
     const wallcolor = 0xc0bdc3;
     const edge = quarterCrate / 2;
-    const walltop = new CubeType(this, centerX, top - edge / 2 , width, edge, quarterCrate * 4, wallcolor);
-    const wallbottom = new CubeType(this, centerX, bottom + edge / 2 , width, edge, quarterCrate * 4, wallcolor);
-    const wallleft = new CubeType(this, left - edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
-    const wallright = new CubeType(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor);
+    const up = 'up';
+    const down = 'down';
+    const dirright = 'right';
+    const dirleft = 'left';
+    const walltop = new CubeType(this, centerX, top - edge / 2 , width, edge, quarterCrate * 4, wallcolor, down, Collision4Direction(Direction.down));
+    const wallbottom = new CubeType(this, centerX, bottom + edge / 2 , width, edge, quarterCrate * 4, wallcolor, up, Collision4Direction(Direction.up));
+    const wallleft = new CubeType(this, left - edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor, dirright, Collision4Direction(Direction.right));
+    const wallright = new CubeType(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor, dirleft, Collision4Direction(Direction.left));
     const walls = [walltop, wallbottom, wallleft, wallright];
     walls.forEach((w: Wall) => {
       w.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
       w.update() ;
     });
 
-    const cube = new CubeType(this, centerY, centerX, quarterCrate * 4, quarterCrate * 4, quarterCrate * 4, 0xfff) as Wall;
+    const cube = new CubeType(this, centerY, centerX, quarterCrate * 4, quarterCrate * 4, quarterCrate * 4, 0xfff, 'cube') as Wall;
     cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
 
     this.crates.add(cube);
 
-    this.rocket = this.physics.add.sprite(centerX, top + quarterCrate * 2, 'rocket');
-    this.rocket.setScale( this.gridUnit / 15);
-    this.rocket.setDepth(1);
+    // this.rocket = this.physics.add.sprite(centerX, top + quarterCrate * 2, 'rocket');
+    // this.rocket.setScale( this.gridUnit / 15);
+    // this.rocket.setDepth(1);
 
     this.crates.add(this.prison);
     this.crates.setDepth(3);
-    this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, 48, this.gridUnit / 14);
+    this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, quarterCrate, this.gridUnit / 4);
     this.player.setDepth(2);
-    this.enemy = new Enemy({scene: this, x: centerX, y: top + quarterCrate * 2}, this.gridUnit, 512, this.gridUnit / 64);
+    this.enemy = new EnemyType({scene: this, x: centerX, y: top + quarterCrate * 2}, this.gridUnit, quarterCrate, this.gridUnit / 4);
     this.enemy.setDepth(2);
     // @ts-ignore
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
@@ -132,7 +145,7 @@ export class GameScene extends Phaser.Scene {
     // @ts-ignore
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
     // @ts-ignore
-    this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
+    // this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
     this.fallingCrates = [];
     // @ts-ignore
     this.crates.children.iterate((crate: Crate, idx: number) => {
@@ -154,9 +167,9 @@ export class GameScene extends Phaser.Scene {
 
     // set motion on the stars
 
-    if (!this.rocket.visible) {
-      this.dropEverything();
-    }
+    // if (!this.rocket.visible) {
+    //   this.dropEverything();
+    // }
     this.backgoundInc === 0
         ? this.background.tilePositionX -= 1
         : this.background.tilePositionY -= this.backgoundInc;
@@ -225,8 +238,8 @@ export class GameScene extends Phaser.Scene {
     this.enemy.y += this.gravitySpeed;
   }
   private blastOff() {
-    this.rocket.visible = false;
-    this.rocketCollider.destroy();
+    // this.rocket.visible = false;
+    // this.rocketCollider.destroy();
     this.backgoundInc = 10;
     this.physics.add.overlap(this.prison, this.enemy.children, () => {
 
