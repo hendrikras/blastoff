@@ -2,8 +2,16 @@ import {Physics, Types, Math as PMath} from 'phaser';
 import Crate from './gameobjects/Crate';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 import Wall from './gameobjects/Wall';
+import Vector2 = Phaser.Math.Vector2;
+import ArcadeBodyCollision = Phaser.Types.Physics.Arcade.ArcadeBodyCollision;
 
-type Direction = Types.Physics.Arcade.ArcadeBodyCollision;
+export enum Direction {
+    none,
+    up,
+    down,
+    left,
+    right,
+}
 export const getGameWidth = (scene: Phaser.Scene) => {
     return scene.game.scale.width;
   };
@@ -11,7 +19,7 @@ export const getGameWidth = (scene: Phaser.Scene) => {
 export const getGameHeight = (scene: Phaser.Scene) => {
     return scene.game.scale.height;
   };
-export const collidesOnAxes = (crate: Crate, item: Crate, direction: Direction): boolean => {
+export const collidesOnAxes = (crate: Crate, item: Crate, direction: ArcadeBodyCollision): boolean => {
   const axis = direction.up || direction.down ? 'x' : 'y';
   const opaxis = direction.up || direction.down ? 'y' : 'x';
   const halfSize = crate.body.height / 2;
@@ -31,10 +39,11 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: Direction):
     || (rightCornerItem <= rightCornerCrate && rightCornerItem >= leftCornerCrate )
   );
 };
-export const impassable = (crate: Crate, otherCrate: Crate, speed: number, direction: Direction, world: ArcadeBodyBounds): boolean =>
+export const Collision4Direction = (dir: Direction) => ({none: dir === Direction.none, up: dir === Direction.up, down: dir === Direction.down, left: dir === Direction.left, right: dir === Direction.right });
+export const impassable = (crate: Crate, otherCrate: Crate, speed: number, direction: ArcadeBodyCollision, world: ArcadeBodyBounds): boolean =>
     reachedBound(crate, speed, direction, world) || blockedInDirection(crate, otherCrate, speed, direction) || crate instanceof Wall;
 
-export const blockedInDirection = (crate: Crate, otherCrate: Crate, speed: number, direction: Direction): boolean => {
+export const blockedInDirection = (crate: Crate, otherCrate: Crate, speed: number, direction: ArcadeBodyCollision): boolean => {
   if (crate.enemy) {
     return true;
   }
@@ -49,7 +58,7 @@ export const blockedInDirection = (crate: Crate, otherCrate: Crate, speed: numbe
   }
  };
 
-export const reachedBound = (crate: Crate, speed: number, direction: Direction, world: ArcadeBodyBounds): boolean => {
+export const reachedBound = (crate: Crate, speed: number, direction: ArcadeBodyCollision, world: ArcadeBodyBounds): boolean => {
     const halfSize = crate.body.height / 2;
     const axis = direction.up || direction.down ? 'y' : 'x';
     const d2str = direction.left ? 'left' : direction.right ? 'right' : direction.up ? 'top' : direction.down ? 'bottom' : 'none';
@@ -59,18 +68,15 @@ export const reachedBound = (crate: Crate, speed: number, direction: Direction, 
     return direction.up || direction.left ? upleft : downright;
 };
 
-export function lineIntersect(p1: PMath.Vector2, p2: PMath.Vector2, p3: PMath.Vector2, p4: PMath.Vector2) {
+export function lineIntersect(p1: PMath.Vector2, p2: PMath.Vector2, p3: PMath.Vector2, p4: PMath.Vector2): Vector2 | null {
     const denom = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
     if (denom === 0) {
         return null;
     }
     const ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / denom;
-    // const ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / denom;
     return new PMath.Vector2({
         x: p1.x + ua * (p2.x - p1.x),
         y: p1.y + ua * (p2.y - p1.y),
-        // seg1: ua >= 0 && ua <= 1,
-        // seg2: ub >= 0 && ub <= 1,
     });
 }
 const varToString = (varObj: object) => Object.keys(varObj)[0];
@@ -84,5 +90,8 @@ export function gcd(x, y) {
     const cb = (a, b) => (b === 0 ? a : cb(b, a % b));
     return cb(Math.abs(x), Math.abs(y));
 }
+export const pyt = (d, rad) => Math.sqrt(rad ** 2 - d ** 2); // use the Pythagorean Theorem to get the new radius length\
+
+export const point2Vec = (({x, y}) => new Vector2(x, y));
 
 export type Constructor<T = {}> = new (...args: any[]) => T;
