@@ -79,21 +79,11 @@ class extends Base {
        delete this.vertices[4];
        delete this.vertices[7];
    }
-   public draw() {
-       this.graphics.clear();
-
-       this.graphics.fillStyle(this.color, 1);
-       this.predraw();
-       const { vertices: v, vanishPoint, pastCenter} = this;
-
-        // the walls should draw the face that is visible. for the rest the draw order is based on position.
-       if (this instanceof Wall && !this.direction?.none) {
-           Object.entries(this.direction).forEach((value: [string, boolean]) => value[1] && this.drawPointsInView(this.getFaceByDirection(Direction[value[0]])) );
-        } else {
-           this.drawPointsInView(this.getYFaceInView());
-           this.drawPointsInView(this.getXFaceInView());
-       }
+    public drawInView() {
+        this.drawVertices(this.getYFaceInView());
+        this.drawVertices(this.getXFaceInView());
     }
+
     private calcVertexPos(num) {
         const {vertices: v, vanishPoint, intersectMap} = this;
         if (!v[num]) {
@@ -106,17 +96,9 @@ class extends Base {
         return v[num];
     }
 
-    private drawPointsInView(points) {
+    private drawVertices(points) {
         this.drawPoints(points[0], points[1], points[2], points[3]);
     }
-   private getXFaceInView = (): Vector2[] => this.pastCenter('x')
-        ? this.getFaceByDirection(Direction.left)
-        : this.getFaceByDirection(Direction.right)
-
-   private getYFaceInView = (): Vector2[] => this.pastCenter('y')
-       ? this.getFaceByDirection(Direction.up)
-       : this.getFaceByDirection(Direction.down)
-
    private getFaceByDirection(direction: Direction) {
        const { vertices: v } = this;
        switch (direction) {
@@ -158,6 +140,13 @@ class extends Base {
         this.intersectMap[7] = createStruct(6, 2, this.MeasurePointY1);
 
     }
+    private getXFaceInView = (): Vector2[] => this.pastCenter('x')
+        ? this.getFaceByDirection(Direction.left)
+        : this.getFaceByDirection(Direction.right)
+
+    private getYFaceInView = (): Vector2[] => this.pastCenter('y')
+        ? this.getFaceByDirection(Direction.up)
+        : this.getFaceByDirection(Direction.down)
     private drawPoints(top, bottom, floorTop, floorBottom) {
 
         const { graphics } = this;
@@ -184,4 +173,8 @@ export interface PerspectiveMixinType  {
     y: number;
     color: number;
     gridUnit: number;
+    predraw: () => void;
+    drawVertices: (faceByDirection: Phaser.Math.Vector2[]) => void;
+    getFaceByDirection: (direction: Direction) => Vector2[];
+    drawInView: () => void;
 }
