@@ -95,3 +95,18 @@ export const pyt = (d, rad) => Math.sqrt(rad ** 2 - d ** 2); // use the Pythagor
 export const point2Vec = (({x, y}) => new Vector2(x, y));
 
 export type Constructor<T = {}> = new (...args: any[]) => T;
+
+export function calculateCircleCenter(A, B, C) {
+    const yDeltaA = B.y - A.y;
+    const xDeltaA = B.x - A.x;
+    const yDeltaB = C.y - B.y;
+    const xDeltaB = C.x - B.x;
+
+    const aSlope = yDeltaA / xDeltaA;
+    const bSlope = yDeltaB / xDeltaB;
+
+    const x = (aSlope * bSlope * (A.y - C.y) + bSlope * (A.x + B.x) - aSlope * (B.x + C.x) ) / (2 * (bSlope - aSlope) );
+    const y = -1 * (x - (A.x + B.x) / 2) / aSlope +  (A.y + B.y) / 2;
+    return new Vector2(x, y);
+
+}

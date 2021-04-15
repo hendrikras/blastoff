@@ -8,7 +8,18 @@ interface Ref { idx1: number; idx2: number; mp: Vector2; }
 export default <TBase extends Constructor>(Base: TBase) =>
 class extends Base {
     get centerBottom(): Phaser.Math.Vector2 {
-        return this.calcVertexPos(3).clone().lerp(this.calcVertexPos(4), 0.5).clone();
+
+        if (!this.vertices[9]) {
+            this.vertices[9] = this.calcVertexPos(3).lerp(this.calcVertexPos(4), 0.5);
+        }
+        return this.vertices[9];
+    }
+
+    get centerCenter(): Phaser.Math.Vector2 {
+        if (!this.vertices[8.5]) {
+            this.vertices[8.5] = this.centerBottom.clone().lerp(this.point, 0.5);
+        }
+        return this.vertices[8.5];
     }
 
   private graphics;
@@ -78,6 +89,8 @@ class extends Base {
        delete this.vertices[3];
        delete this.vertices[4];
        delete this.vertices[7];
+       delete this.vertices[8.5]; // center
+       delete this.vertices[9];
    }
     public drawInView() {
         this.drawVertices(this.getYFaceInView());
@@ -100,7 +113,7 @@ class extends Base {
         this.drawPoints(points[0], points[1], points[2], points[3]);
     }
    private getFaceByDirection(direction: Direction) {
-       const { vertices: v } = this;
+       const { vertices: v} = this;
        switch (direction) {
            case Direction.up:
                this.calcVertexPos(4);
@@ -165,6 +178,7 @@ export interface PerspectiveMixinType  {
     dimensions: PMath.Vector2;
     point: PMath.Vector2;
     centerBottom: PMath.Vector2;
+    centerCenter: PMath.Vector2;
     graphics: Graphics;
     draw: () => void;
     pastCenter: (a: string) => boolean;
