@@ -1,31 +1,32 @@
 import { Physics, Types } from 'phaser';
-import { collidesOnAxes, impassable, lineIntersect } from '../helpers';
+import {collidesOnAxes, impassable, lineIntersect, point2Vec, pyt} from '../helpers';
 
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
-import Sprite = Phaser.Physics.Arcade.Sprite;
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
-import {PerspectiveMixinType} from './PerspectiveMixin';
+import PerspectiveMixin, {PerspectiveMixinType} from './PerspectiveMixin';
 import Circle = Phaser.Geom.Circle;
 import CubicBezier = Phaser.Curves.CubicBezier;
 import Vector2 = Phaser.Math.Vector2;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
 import QuadraticBezier = Phaser.Curves.QuadraticBezier;
-import Reverse = Phaser.Math.Angle.Reverse;
-import Arc = Phaser.GameObjects.Arc;
-import Curve = Phaser.Curves.Curve;
 import RadToDeg = Phaser.Math.RadToDeg;
 import Line = Phaser.Geom.Line;
-import ShortestBetween = Phaser.Math.Angle.ShortestBetween;
 import DegToRad = Phaser.Math.DegToRad;
-import RECTANGLE = Phaser.Geom.RECTANGLE;
-import Rectangle = Phaser.Geom.Rectangle;
 
 import PerspectiveObject from '../gameobjects/PerspectiveMixin';
 import SphereClass from './Sphere';
+import CIRCLE = Phaser.Geom.CIRCLE;
+import LINE = Phaser.Geom.LINE;
+import ELLIPSE = Phaser.Geom.ELLIPSE;
 
+interface ShapeCollectionItem {
+    type: number;
+    color: number;
+    shape: object;
+}
 export default class Player extends CollidesWithObjects {
     private speed;
     private hasInput: boolean;
@@ -41,7 +42,9 @@ export default class Player extends CollidesWithObjects {
     private size: number;
     private torso;
     private pathHelper: Circle;
-    private head: PerspectiveMixinType;
+    private head: SphereClass;
+
+    private dist: number;
 
     constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, scale) {
         super(config.scene, config.x, config.y, size, size);
@@ -62,7 +65,7 @@ export default class Player extends CollidesWithObjects {
         const quarter = size * 2;
         // @ts-ignore;
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
-        // this.add(this.head);
+        this.head.setDepth(2);
         this.crates = crates.children.getArray() as Crate[];
         this.speed = gridUnit * this.pace;
         this.gridUnit = gridUnit / 10;
@@ -88,118 +91,118 @@ export default class Player extends CollidesWithObjects {
         const that = this as ContainerLite;
         that.graphics.clear();
         that.graphics.lineStyle();
-        that.graphics.setDepth(2);
+        const osbscuredShapes: ShapeCollectionItem[] = [];
+        const unubscuredShapes: ShapeCollectionItem[] = [];
         const { scene } = that;
         const {physics: {world: {bounds: {height, width, centerX, centerY}}}} = scene;
 
         that.setChildPosition(this.pathHelper, that.x, that.y);
         that.setChildPosition(this.head, that.x, that.y);
         that.predraw();
-        const { vertices: v, x, y, graphics, point, centerBottom, vanishPoint} = this as unknown as PerspectiveMixinType;
-        const centerCenter = centerBottom.clone().lerp(that.point, 0.5).clone();
+        const { vertices: v, x, y, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
         that.setChildPosition(this.center, centerCenter.x, centerCenter.y);
-/////////////////
         const faceFeatColor = 0x16D8D8;
-        //
-
-        that.head.predraw();
-        that.head.predrawSphere(that.body.angle, this.pathHelper);
-        const { equator: mouthLine, meridian: eyeLine } = this.head as unknown as SphereClass;
+        this.head.update();
+        const { equator, pi2: all} = this.head as unknown as SphereClass;
+        const {curve: eyeLine, isObscured} = this.head.getSlice('x', 0.5);
 
         if (centerBottom) {
-
             that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
-            const all = 2 * Math.PI;
 
-            const angle = BetweenPoints(that.point, this.shadow);
-
-            const angleN = Normalize(angle);
-            const defA = (angleN / all);
             const direction = Normalize(that.body.angle) / all;
+            const facingDirectionPoint = new Vector2(Circle.GetPoint(this.pathHelper, direction));
+
+            const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
+
             const rightShoulder = (direction + 0.25) % 1;
             const leftShoulder =  (direction + 0.75) % 1;
 
-            const facingCenter = defA + 0.25;
-            const mirrorA = Math.abs(facingCenter - 0.5);
-            const facingDirectionPoint = new Vector2(Circle.GetPoint(this.pathHelper, direction));
-            const shoulder1Point = new Vector2(Circle.GetPoint(this.pathHelper, leftShoulder));
-            const hand1 = new Vector2(Circle.GetPoint(this.center, leftShoulder));
-            const shoulder2Point = new Vector2(Circle.GetPoint(this.pathHelper, rightShoulder));
-            const hand2 = new Vector2(Circle.GetPoint(this.center, rightShoulder));
+            const facingCenter = 0.25;
+            const mirrorA = (facingCenter + 0.5) % 1;
+            const shoulder1Point = equator.getPoint(relativeAngle - direction - 0.25 % 1);
+            const shoulder2Point = equator.getPoint(relativeAngle - direction - 0.75 % 1);
+            const hand1 = new Vector2(Circle.GetPoint(this.center, rightShoulder));
+            const hand2 = new Vector2(Circle.GetPoint(this.center, leftShoulder));
 
-            const p1 = new Vector2(Circle.GetPoint(this.pathHelper, facingCenter));
-            const p2 = new Vector2(Circle.GetPoint(this.pathHelper, mirrorA ));
-            const p3 = new Vector2(Circle.GetPoint(this.shadow, facingCenter)).lerp(that.vanishPoint, 0.05);
-            const p4 = new Vector2(Circle.GetPoint(this.shadow, mirrorA)).lerp(that.vanishPoint, 0.05);
-            // graphics.fillPoint(test.x, test.y, this.gridUnit);
-            // graphics.fillPoint(shoulder2Point.x, shoulder2Point.y, this.gridUnit);
+            const p1 = equator.getPoint(facingCenter);
+            const p2 = equator.getPoint(mirrorA);
+            const p3 = equator.getPoint(facingCenter).lerp(vanishPoint, 0.08);
+            const p4 = equator.getPoint(mirrorA).lerp(vanishPoint, 0.08);
             graphics.fillStyle(this.color);
-            graphics.fillCircle(hand1.x, hand1.y, this.gridUnit / 1.5);
-            graphics.fillCircle(hand2.x, hand2.y, this.gridUnit / 1.5);
-
+            const type = CIRCLE;
+            const handColor = 0X2405B;
+            const hand1Shape = {type, shape: new Circle(hand1.x, hand1.y, this.gridUnit / 1.5), color: handColor};
+            const hand2Shape = {type, shape: new Circle(hand2.x, hand2.y, this.gridUnit / 1.5), color: handColor};
             this.torso = new CubicBezier(p1, p3, p4, p2);
-            // const curve = new QuadraticBezier(shoulder1Point, centerBottom, shoulder2Point);
-            const bottomBound = new Vector2(vanishPoint.x, this.worldBounds.y);
-            const leftBound = new Vector2(this.worldBounds.x, vanishPoint.y);
-            const yAxis = new Vector2(vanishPoint.x, y);
-            const xAxis = new Vector2(x, vanishPoint.y);
-            const fullY = vanishPoint.distance(bottomBound);
-            const fullX = vanishPoint.distance(leftBound);
-            const meY = vanishPoint.distance(yAxis);
-            const meX = vanishPoint.distance(xAxis);
-            // const dist = floorBottom.distance(bottom);
-            // const mouthLine = new Phaser.Curves.Ellipse(x, y, this.size, (meY / fullY) * this.size, 0, 0.1, true, RadToDeg(angle) + 45);
-            // const mouthLine2 = new Phaser.Curves.Ellipse(x, y, (meX / fullX) * this.size, this.size, 0, 1, true /*RadToDeg(angle)*/);
-            // const m1 = mouthLine.getPoint(0.4);
-            // const m3 = mouthLine.getPoint(0.6);
-            const eye1 = eyeLine.getPoint(0.95);
-            // const m2 = eyeLine.getPoint(0.7);
-            const eye2 = eyeLine.getPoint(0.05);
-            const faceFeatColor = 0x16D8D8;
-            graphics.lineStyle(this.gridUnit / 4, faceFeatColor, 1);
-            graphics.strokeLineShape( new Line(shoulder1Point.x, shoulder1Point.y, hand1.x, hand1.y));
-            graphics.strokeLineShape( new Line(shoulder2Point.x, shoulder2Point.y, hand2.x, hand2.y));
-            // graphics.strokeLineShape( new Line(x, y, vanishPoint.x, vanishPoint.y));
-            // graphics.strokeLineShape( new Line(x, y, shoulder2Point.x, shoulder2Point.y));
-            // graphics.strokeLineShape( new Line(shoulder2Point.x, shoulder2Point.y, vanishPoint.x, vanishPoint.y));
-            const line = new Line(shoulder2Point.x, shoulder2Point.y, vanishPoint.x, vanishPoint.y);
-            // const triAngle = DegToRad(45);
-            // const angle = this.body.angle - triAngle
-            const newline = Phaser.Geom.Line.SetToAngle(line, shoulder2Point.x, shoulder2Point.y, (DegToRad(45)), this.size);
-            const bottomSphere = lineIntersect(point, vanishPoint, shoulder2Point, newline.getPointB());
-
-            // bottomSphere && graphics.strokeLineShape( new Line(point.x, point.y, bottomSphere.x, bottomSphere.y));
-
-            // newpoint && graphics.strokeLineShape(new Line(x, y, newpoint.x, newpoint.y));
-            // graphics.strokeLineShape(newline);
-            // lineIntersect(shoulder2Point, vanishPoint, point, newline.getPointB());
-
-            graphics.lineStyle(0, 0);
-            graphics.fillStyle(this.color, 0.5);
-
-            // this.torso.draw(graphics);
-
+            this.torso.draw(graphics);
+            graphics.fillStyle(this.color, 1);
             graphics.fillPath();
-            graphics.strokePath();
+            const nose = relativeAngle - direction;
+            const eye1Angle = nose - 0.95 % 1;
+            const eye2Angle = nose - 0.05 % 1;
+            const eye1 = eyeLine.getPoint(eye1Angle);
+            const eye2 = eyeLine.getPoint(eye2Angle);
+            const faceFeatColor = 0x16D8D8;
+            const arm1 = {type: LINE,  shape: new Line(shoulder1Point.x, shoulder1Point.y, hand1.x, hand1.y), color: 0x000};
+            const arm2 = {type: LINE,  shape: new Line(shoulder2Point.x, shoulder2Point.y, hand2.x, hand2.y), color: 0x000};
+            let mouth2 = equator.getPoint(eye2Angle);
+            let mouth1 = equator.getPoint(eye1Angle);
+
+            const nosePoint = equator.getPoint(nose);
+            const noseObscured = isObscured(nosePoint);
+            const mouth1Obscured = isObscured(mouth1);
+            const mouth2Obscured = isObscured(mouth2);
+            if (mouth1Obscured && !noseObscured) {
+               mouth1 = mouth1.distance(mouth1Obscured[0]) < mouth1.distance(mouth1Obscured[1]) ? mouth1Obscured[0] : mouth1Obscured[1];
+            }
+            if (mouth2Obscured && !noseObscured) {
+                mouth2 = mouth2.distance(mouth2Obscured[0]) < mouth1.distance(mouth2Obscured[1]) ? mouth2Obscured[0] : mouth2Obscured[1];
+            }
+            if (!noseObscured) {
+                const shape = new QuadraticBezier(mouth1, nosePoint, mouth2);
+                unubscuredShapes.push({type: -2, shape, color: 0x00});
+            }
+
+            if (this.head.isObscured(shoulder1Point)) {
+                osbscuredShapes.push(arm1);
+                osbscuredShapes.push(hand1Shape);
+            } else {
+                unubscuredShapes.push(arm1);
+                unubscuredShapes.push(hand1Shape);
+            }
+            if (this.head.isObscured(shoulder2Point)) {
+                osbscuredShapes.push(arm2);
+                osbscuredShapes.push(hand2Shape);
+            } else {
+                unubscuredShapes.push(arm2);
+                unubscuredShapes.push(hand2Shape);
+            }
 
             graphics.fillStyle(faceFeatColor);
 
-            graphics.fillCircle(eye1.x, eye1.y, this.gridUnit / 2.5);
-            graphics.fillCircle(eye2.x, eye2.y, this.gridUnit / 2.5);
-            graphics.lineStyle(this.gridUnit / 4, faceFeatColor);
-            mouthLine.draw(graphics);
-            // graphics.fillPath();
+            const wh = this.gridUnit / 2.5;
 
-            // mouthLine2.draw(graphics);
+            if (isObscured(eye1)) {
+                const shape = new Circle(eye1.x, eye1.y, wh);
+                osbscuredShapes.push({type, shape, color: faceFeatColor});
+            } else {
+                const shape = this.getEyeShape(eye1, wh);
+                unubscuredShapes.push({type: -1, shape, color: faceFeatColor});
+            }
+            if (isObscured(eye2)) {
+                const shape = new Circle(eye2.x, eye2.y, wh);
+                osbscuredShapes.push({type, shape, color: faceFeatColor});
+            } else {
+                const shape = this.getEyeShape(eye2, wh);
+                unubscuredShapes.push({type: -1, shape, color: faceFeatColor});
+            }
 
-                // const mouth = new QuadraticBezier(m1, m2, m3);
-            // arc.draw(that.graphics);
-
-            //  Without this the arc will appear closed when stroked
-            graphics.beginPath();
-            // that.graphics.arc( x, y, this.size, Reverse(BetweenPoints(m1, that.point)), Reverse(BetweenPoints(m3, that.point)), true);
-
-            graphics.strokePath();
+            this.drawShapes(osbscuredShapes);
+            graphics.fillStyle(this.color, 1);
+            graphics.fillCircleShape(this.head.shape);
+            graphics.fillStyle(faceFeatColor, 1);
+            this.drawShapes(unubscuredShapes);
+            graphics.lineStyle(0, 0);
 
         }
 
@@ -211,14 +214,15 @@ export default class Player extends CollidesWithObjects {
         // @ts-ignore
         const { left: { isDown: leftDown}, right: { isDown: rightDown}, up: { isDown: upDown}, down: {isDown: downDown}} = this.cursorKeys;
         if (leftDown && !this.blockedDirection.left) {
-          velocity.x -= 1;
-          this.hasInput = true;
-          this.blockedDirection.right = false;
+
+            velocity.x -= 1;
+            this.hasInput = true;
+            this.blockedDirection.right = false;
         }
         if (rightDown && !this.blockedDirection.right)  {
-          velocity.x += 1;
-          this.hasInput = true;
-          this.blockedDirection.left = false;
+            velocity.x += 1;
+            this.hasInput = true;
+            this.blockedDirection.left = false;
 
         }
         if (upDown && !this.blockedDirection.up) {
@@ -244,7 +248,57 @@ export default class Player extends CollidesWithObjects {
       }
       this.handleCrateCollison(crate);
     }
+    private getEyeShape(position, radius) {
+        const { shape, pi2: all } = this.head;
+        const between = Normalize(BetweenPoints(position, shape));
+        const midRad = between / all;
+        const dist = (position.distance(shape) / (shape.radius) - 0.5) * 2;
+        const midPoint = point2Vec(shape.getPoint(midRad)).lerp(shape, dist);
+        const l = new Line(midPoint.x, midPoint.y, shape.x, shape.y);
+        const distance = shape.radius * (1 - dist);
+        const size = pyt(distance, shape.radius);
 
+        const ang = RadToDeg(between) + 90 % 360;
+        Line.SetToAngle(l, midPoint.x, midPoint.y, DegToRad(ang), size);
+
+        const circAng = (between / all + 0.25) % 1;
+        const pointB = l.getPointB();
+        const startAngle = Normalize(BetweenPoints(shape, pointB));
+        const circAng2 = (circAng + 0.5) % 1;
+        const reflectPoint1 = shape.getPoint(circAng);
+        const reflectPoint2 = shape.getPoint(circAng2);
+        const reflectingLine = new Line(reflectPoint1.x, reflectPoint1.y, reflectPoint2.x, reflectPoint2.y);
+        const toCenter = new Line(pointB.x, pointB.y, shape.x, shape.y);
+        const endAngle = Normalize(Line.ReflectAngle( toCenter, reflectingLine));
+        return { x: position.x, y: position.y, radius, startAngle, endAngle, anticlockwise: false  };
+    }
+    private drawShapes(items) {
+
+    items.forEach(({type, shape, color}) => {
+            const {graphics} = this as unknown as PerspectiveMixinType;
+            if (type === CIRCLE) {
+                graphics.fillStyle(color, 1);
+                graphics.fillCircleShape(shape);
+            } else if (type === ELLIPSE) {
+                graphics.fillStyle(color, 1);
+                graphics.fillEllipseShape(shape);
+            } else if (type === -2) {
+                graphics.lineStyle(this.gridUnit / 4, color, 1);
+                graphics.strokePoints(shape.getPoints());
+            } else if (type === -1) {
+                const {x, y, radius, startAngle, endAngle, anticlockwise} = shape;
+                graphics.beginPath();
+                graphics.fillStyle(color, 1);
+                graphics.arc(x, y, radius, startAngle, endAngle, anticlockwise);
+                graphics.fillPath();
+
+            } else {
+                graphics.lineStyle(this.gridUnit / 4, color, 1);
+                graphics.strokeLineShape(shape);
+
+            }
+        });
+    }
     private rotateZ3D(theta, orig) {
         const sinTheta = Math.sin(theta);
         const cosTheta = Math.cos(theta);
