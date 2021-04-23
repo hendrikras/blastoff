@@ -97,6 +97,8 @@ class extends Base {
         this.drawVertices(this.getXFaceInView());
     }
 
+    public dp = (p: Vector2) => (this as unknown as PerspectiveMixinType).graphics.fillPoint(p.x, p.y, 3);
+
     private calcVertexPos(num) {
         const {vertices: v, vanishPoint, intersectMap} = this;
         if (!v[num]) {
@@ -191,4 +193,5 @@ export interface PerspectiveMixinType  {
     drawVertices: (faceByDirection: Phaser.Math.Vector2[]) => void;
     getFaceByDirection: (direction: Direction) => Vector2[];
     drawInView: () => void;
+    dp: (p: Vector2) => void;
 }
