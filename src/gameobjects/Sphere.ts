@@ -35,8 +35,8 @@ export default class extends Wall {
     private circle: Circle;
     private radius: number;
     private $equatorAxis: Line;
-    private $isObscured: (point: Vector2) => boolean;
-    constructor(scene: Scene, x: number , y: number, w: number, h: number, d, color: number, up, down, left, right) {
+    private $isObscured;
+    constructor(scene: Scene, x: number , y: number, w: number, h: number, d, color: number, up = false, down = false, left = false, right = false) {
         super(scene, x, y, w, h, d, color, 'sphere', {none: false, up, down, right, left});
         this.alpha = 0;
         this.radius = w / 2;
@@ -90,7 +90,7 @@ export default class extends Wall {
         const middle = calculateCircleCenter(eqautorAxis1, eqautorAxis2, midPoint);
         const start = newCircle.getPoint(0.5);
         const end = newCircle.getPoint(1);
-        this.$isObscured = (p: Vector2) => middle.distance(p) <= eqautorAxis1.distance(eqautorAxis2);
+        this.$isObscured = (p: Vector2) => middle.distance(p) <= eqautorAxis1.distance(eqautorAxis2) && [eqautorAxis1, eqautorAxis2];
 
         this.$equatorAxis = new Line(eqautorAxis1.x, eqautorAxis2.y, eqautorAxis2.x, eqautorAxis2.y);
 
@@ -110,5 +110,4 @@ export default class extends Wall {
 
         return new Vector2(x, y);
     }
-    private dp = (p: Vector2) => (this as unknown as PerspectiveMixinType).graphics.fillPoint(p.x, p.y, 3);
 }

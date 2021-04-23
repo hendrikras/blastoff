@@ -176,7 +176,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.player.isMoving() ) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
-      // this.enemy.exterminate(pos);
+      this.enemy.exterminate(pos);
     }
 
     this.player.update();
