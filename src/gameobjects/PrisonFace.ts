@@ -12,10 +12,10 @@ export default <TBase extends Constructor>(Base: TBase) =>
             graphics.fillStyle(0xCCCCCC, 1);
             graphics.lineStyle(gridUnit / 4, 0x000, 1);
             const divide = 1 / 5;
-            const topboard = top.clone().lerp(floorTop, divide).clone();
-            const bottomboard = bottom.clone().lerp(floorBottom, divide).clone();
-            const topfloorboard = floorTop.clone().lerp(top, divide).clone();
-            const bottomfloorboard = floorBottom.clone().lerp(bottom, divide).clone();
+            const topboard = top.clone().lerp(floorTop, divide);
+            const bottomboard = bottom.clone().lerp(floorBottom, divide);
+            const topfloorboard = floorTop.clone().lerp(top, divide);
+            const bottomfloorboard = floorBottom.clone().lerp(bottom, divide);
 
             graphics.fillPoints([top, bottom, bottomboard, topboard], true);
             graphics.strokePath();
@@ -29,8 +29,8 @@ export default <TBase extends Constructor>(Base: TBase) =>
             const beams = 7;
             for (let i = 1; i <= beams; i++) {
                 const lerp = i / beams;
-                const topsideboard = topboard.clone().lerp(bottomboard, lerp).clone();
-                const bottomsideboard = topfloorboard.clone().lerp(bottomfloorboard, lerp).clone();
+                const topsideboard = topboard.clone().lerp(bottomboard, lerp);
+                const bottomsideboard = topfloorboard.clone().lerp(bottomfloorboard, lerp);
 
                 let alpha = 1;
                 if (i === 4 || i === 6 || i === 2) {

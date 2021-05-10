@@ -13,7 +13,7 @@ import QuadraticBezier = Phaser.Curves.QuadraticBezier;
 import SphereClass from './Sphere';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
-import {point2Vec, pyt, getVector, lineIntersect} from '../helpers';
+import {point2Vec, pyt, getVector, lineIntersect, setPosition} from '../helpers';
 import DegToRad = Phaser.Math.DegToRad;
 import Path = Phaser.Curves.Path;
 import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
@@ -102,11 +102,14 @@ export default class Enemy extends CollidesWithObjects {
           const obscuredShapes: ShapeCollectionItem[] = [];
           const unubscuredShapes: ShapeCollectionItem[] = [];
 
-          that.setChildPosition(this.pathHelper, that.x, that.y);
-          that.setChildPosition(this.head, that.x, that.y);
+          // that.setChildPosition(this.pathHelper, that.x, that.y);
+          // that.setChildPosition(this.head, that.x, that.y);
           that.predraw();
           const { vertices: v, x, y, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
-          that.setChildPosition(this.center, centerCenter.x, centerCenter.y);
+          // that.setChildPosition(this.center, centerCenter.x, centerCenter.y);
+          setPosition(this.pathHelper, that);
+          setPosition(this.head, that);
+          setPosition(this.center, centerCenter);
           this.head.update();
           const { equator, pi2: all, shape: sphere} = this.head as unknown as SphereClass;
           const {curve: eyeLine, isObscured} = this.head.getSlice('x', 0.65);
@@ -114,7 +117,7 @@ export default class Enemy extends CollidesWithObjects {
           const feetCircle = new Circle(hoverPosition.x, hoverPosition.y, sphere.radius / 2.3);
           graphics.fillCircleShape(feetCircle);
 
-          that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
+          // that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
           const direction = Normalize(that.body.angle) / all;
 
           const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
@@ -123,7 +126,6 @@ export default class Enemy extends CollidesWithObjects {
           const leftShoulder =  (direction + 0.75) % 1;
 
           const facingCenter = 0.25;
-          const mirrorA = (facingCenter + 0.5) % 1;
           const shoulder1Point = equator.getPoint(relativeAngle - direction - 0.25 % 1);
           const shoulder2Point = equator.getPoint(relativeAngle - direction - 0.75 % 1);
           const hand1 = new Vector2(Circle.GetPoint(this.center, rightShoulder));
@@ -131,7 +133,7 @@ export default class Enemy extends CollidesWithObjects {
           graphics.fillStyle(this.color);
 
           const torso = new Path();
-          const tp = this.getExternalTangent(this.head.shape, feetCircle);
+          const tp = this.getExternalTangent(this.head.shape, feetCircle, vanishPoint);
 
           if (tp) {
               const {p1, p2, p3, p4} = tp;
@@ -221,10 +223,6 @@ export default class Enemy extends CollidesWithObjects {
           this.resetBlockedDirections();
 
           }
-    private getLine(p1, p2) {
-            const line = new Line(p1.x, p1.y, p2.x, p2.y);
-            return line;
-        }
     private getEyeShape(position, radius) {
         const { shape, pi2: all } = this.head;
         const between = Normalize(BetweenPoints(position, shape));
@@ -257,42 +255,4 @@ export default class Enemy extends CollidesWithObjects {
         this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
         (that.body as Physics.Arcade.Body).setVelocity(0);
     }
-
-    private getExternalTangent(circle1, circle2) {
-        const { graphics, vanishPoint} = this as unknown as PerspectiveMixinType;
-        graphics.fillStyle(0xb4d455, 1);
-        graphics.lineStyle(4, 0x000, 1);
-
-        const getAngle = (c) => Normalize(BetweenPoints(c, vanishPoint)) / (2 * Math.PI);
-        const angle1 = (getAngle(circle1) + 0.25) % 1;
-        const angle2 = (angle1 + 0.5) % 1;
-
-        const angle3 = (getAngle(circle2) + 0.25) % 1;
-        const angle4 = (angle3 + 0.5) % 1;
-        const pp2 = circle1.getPoint(angle2);
-        const pp4 = circle2.getPoint(angle4);
-        const lineA = Phaser.Geom.Line.Extend(this.getLine(pp2, pp4), circle1.radius, circle1.radius);
-
-        const intersectPoint = lineIntersect(lineA.getPointA(), lineA.getPointB(), circle1, vanishPoint) as Vector2;
-        const halfpoint = point2Vec(circle2).lerp(intersectPoint, 0.5);
-        const measureCircle = new Circle(halfpoint.x, halfpoint.y, halfpoint.distance(intersectPoint));
-        const intersects = GetCircleToCircle(measureCircle, circle2);
-        // tslint:disable-next-line:one-variable-per-declaration
-        let p1, p2, p3, p4;
-        if (intersects?.length > 0) {
-            p1 = intersects[0];
-            p2 = intersects[1];
-            const lineB = new Line(p1.x, p1.y, intersectPoint.x, intersectPoint.y);
-            const lineC = new Line(p2.x, p2.y, intersectPoint.x, intersectPoint.y);
-            const d = point2Vec(circle1).distance(circle2);
-            const lineD = Phaser.Geom.Line.Extend(lineB, d, 0);
-            const lineE = Phaser.Geom.Line.Extend(lineC, d, 0);
-            p3 = lineD.getPointA();
-            p4 = lineE.getPointA();
-        }
-
-        const result = {p1, p2, p3, p4};
-        return p1 && p2 && p3 && p4 ? result : false;
-    }
-
 }

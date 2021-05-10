@@ -113,3 +113,11 @@ export function calculateCircleCenter(A, B, C) {
 
 export const getVector = (cx, cy, a, r) => new Vector2(cx + r * Math.cos(a), cy + r * Math.sin(a));
 export const angle = (c1, c2) => Math.atan2(c1.y - c2.y, c1.x - c2.x);
+interface HasPos {
+    x: number;
+    y: number;
+}
+export function setPosition(target: HasPos, position: HasPos) {
+    target.x = position.x;
+    target.y = position.y;
+}
