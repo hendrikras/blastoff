@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import Scenes from './scenes';
 
 import ContainerLitePlugin from 'phaser3-rex-plugins/plugins/containerlite-plugin.js';
+import CustomShapesPlugin from 'phaser3-rex-plugins/plugins/customshapes-plugin.js';
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
   title: 'Sample',
@@ -25,6 +26,11 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
       plugins: {
         global: [
           { key: 'rexContainerLitePlugin', plugin: ContainerLitePlugin, start: true },
+          {
+            key: 'rexCustomShapesPlugin',
+            plugin: CustomShapesPlugin,
+            start: true,
+          },
         ],
       },
 

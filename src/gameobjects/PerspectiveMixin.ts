@@ -97,7 +97,7 @@ class extends Base {
         this.drawVertices(this.getXFaceInView());
     }
 
-    public dp = (p: Vector2) => (this as unknown as PerspectiveMixinType).graphics.fillPoint(p.x, p.y, 3);
+    public dp = (p: Vector2) => (this as unknown as PerspectiveMixinType).graphics.fillPoint(p.x, p.y, this.gridUnit / 2);
 
     private calcVertexPos(num) {
         const {vertices: v, vanishPoint, intersectMap} = this;

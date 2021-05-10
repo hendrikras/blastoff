@@ -4,6 +4,13 @@ import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import {PerspectiveMixinType} from './PerspectiveMixin';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import ELLIPSE = Phaser.Geom.ELLIPSE;
+import {lineIntersect, point2Vec} from '../helpers';
+import Normalize = Phaser.Math.Angle.Normalize;
+import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
+import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
+import Line = Phaser.Geom.Line;
+import Vector2 = Phaser.Math.Vector2;
+import Circle = Phaser.Geom.Circle;
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
@@ -67,6 +74,8 @@ export default class CollidesWithObjects extends ContainerLite {
             } else if (type === -3) {
                 graphics.fillStyle(color, 1);
                 graphics.fillPoints(shape.getPoints());
+                // graphics.strokePoints(shape.getPoints());
+
             } else if (type === -2) {
                 graphics.lineStyle(this.gridUnit / 4, color, 1);
                 graphics.strokePoints(shape.getPoints());
@@ -83,5 +92,47 @@ export default class CollidesWithObjects extends ContainerLite {
             }
         });
         items?.shape?.destroy();
+    }
+    protected getExternalTangent(circle1, circle2, crossPoint) {
+        const { graphics } = this as unknown as PerspectiveMixinType;
+        graphics.fillStyle(0xb4d455, 1);
+        graphics.lineStyle(4, 0x000, 1);
+
+        const getAngle = (c) => Normalize(BetweenPoints(c, crossPoint)) / (2 * Math.PI);
+        const angle1 = (getAngle(circle1) + 0.25) % 1;
+        const angle2 = (angle1 + 0.5) % 1;
+
+        const angle3 = (getAngle(circle2) + 0.25) % 1;
+        const angle4 = (angle3 + 0.5) % 1;
+        const pp2 = circle1.getPoint(angle2);
+        const pp4 = circle2.getPoint(angle4);
+        const lineA = Phaser.Geom.Line.Extend(this.getLine(pp2, pp4), circle1.radius, circle1.radius);
+
+        const intersectPoint = lineIntersect(lineA.getPointA(), lineA.getPointB(), circle1, crossPoint) as Vector2;
+        // tslint:disable-next-line:one-variable-per-declaration
+        let p1, p2, p3, p4, intersects;
+        if (intersectPoint) {
+            const halfpoint = point2Vec(circle2).lerp(intersectPoint, 0.5);
+            const measureCircle = new Circle(halfpoint.x, halfpoint.y, halfpoint.distance(intersectPoint));
+            intersects = GetCircleToCircle(measureCircle, circle2);
+        }
+        if (intersects?.length > 0) {
+            p1 = intersects[0];
+            p2 = intersects[1];
+            const lineB = new Line(p1.x, p1.y, intersectPoint.x, intersectPoint.y);
+            const lineC = new Line(p2.x, p2.y, intersectPoint.x, intersectPoint.y);
+            const d = point2Vec(circle1).distance(circle2);
+            const lineD = Phaser.Geom.Line.Extend(lineB, d, 0);
+            const lineE = Phaser.Geom.Line.Extend(lineC, d, 0);
+            p3 = lineD.getPointA();
+            p4 = lineE.getPointA();
+        }
+
+        const result = {p1, p2, p3, p4};
+        return p1 && p2 && p3 && p4 ? result : false;
+    }
+    private getLine(p1, p2) {
+        const line = new Line(p1.x, p1.y, p2.x, p2.y);
+        return line;
     }
   }

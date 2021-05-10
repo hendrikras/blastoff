@@ -24,7 +24,6 @@ const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   visible: false,
   key: 'Game',
   physics: {
-
   },
 };
 
@@ -128,9 +127,9 @@ export class GameScene extends Phaser.Scene {
 
     this.crates.add(cube);
 
-    // this.rocket = this.physics.add.sprite(centerX, top + quarterCrate * 2, 'rocket');
-    // this.rocket.setScale( this.gridUnit / 15);
-    // this.rocket.setDepth(1);
+    this.rocket = this.physics.add.sprite(centerX, top + quarterCrate * 2, 'rocket');
+    this.rocket.setScale( this.gridUnit / 15);
+    this.rocket.setDepth(1);
 
     this.crates.add(this.prison);
     this.crates.setDepth(3);
@@ -145,7 +144,7 @@ export class GameScene extends Phaser.Scene {
     // @ts-ignore
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
     // @ts-ignore
-    // this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
+    this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
     this.fallingCrates = [];
     // @ts-ignore
     this.crates.children.iterate((crate: Crate, idx: number) => {
@@ -167,16 +166,16 @@ export class GameScene extends Phaser.Scene {
 
     // set motion on the stars
 
-    // if (!this.rocket.visible) {
-    //   this.dropEverything();
-    // }
+    if (!this.rocket.visible) {
+      this.dropEverything();
+    }
     this.backgoundInc === 0
         ? this.background.tilePositionX -= 1
         : this.background.tilePositionY -= this.backgoundInc;
 
     if (this.player.isMoving() ) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
-      this.enemy.exterminate(pos);
+      // this.enemy.exterminate(pos);
     }
 
     this.player.update();
@@ -238,16 +237,16 @@ export class GameScene extends Phaser.Scene {
     this.enemy.y += this.gravitySpeed;
   }
   private blastOff() {
-    // this.rocket.visible = false;
-    // this.rocketCollider.destroy();
+    this.rocket.visible = false;
+    this.rocketCollider.destroy();
     this.backgoundInc = 10;
     this.physics.add.overlap(this.prison, this.enemy.children, () => {
 
-        // if (this.enemy.y <= this.physics.world.bounds.bottom - this.enemy.height){
+        if (this.enemy.y <= this.physics.world.bounds.bottom - this.enemy.height) {
           this.endGame(true);
           this.enemy.x = this.prison.x;
           this.enemy.y = this.prison.y;
-        // }
+        }
     });
 
   }
