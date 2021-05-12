@@ -3,6 +3,7 @@ import Scenes from './scenes';
 
 import ContainerLitePlugin from 'phaser3-rex-plugins/plugins/containerlite-plugin.js';
 import CustomShapesPlugin from 'phaser3-rex-plugins/plugins/customshapes-plugin.js';
+import RoundRectanglePlugin from 'phaser3-rex-plugins/plugins/roundrectangle-plugin';
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
   title: 'Sample',
@@ -29,6 +30,11 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
           {
             key: 'rexCustomShapesPlugin',
             plugin: CustomShapesPlugin,
+            start: true,
+          },
+          {
+            key: 'rexRoundRectanglePlugin',
+            plugin: RoundRectanglePlugin,
             start: true,
           },
         ],

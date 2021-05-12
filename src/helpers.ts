@@ -121,3 +121,41 @@ export function setPosition(target: HasPos, position: HasPos) {
     target.x = position.x;
     target.y = position.y;
 }
+
+export const CreateBubbleShape = (scene) => {
+    return scene.add.rexCustomShapes({
+        type: 'SpeechBubble',
+        create: { lines: 1 },
+        update: function() {
+            const radius = 20;
+            const strokeColor = this.getData('strokeColor');
+            const fillColor = this.getData('fillColor');
+            // const radius = this.getData('radius');
+            // const startAngle = this.getData('startAngle');
+            // const endAngle = this.getData('endAngle');
+
+            // tslint:disable-next-line:one-variable-per-declaration
+            const left = 0, right = this.width,
+                top = 0, bottom = this.height, boxBottom = bottom;
+            this.getShapes()[0]
+                .lineStyle(2, strokeColor, 1)
+                .fillStyle(fillColor, 1)
+                // top line, right arc
+                .startAt(left + radius, top).lineTo(right - radius, top)
+                .arc(right - radius, top + radius, radius, 270, 360)
+                // right line, bottom arc
+                .lineTo(right, boxBottom - radius)
+                .arc(right - radius, boxBottom - radius, radius, 0, 90)
+                // bottom indent
+                // .lineTo(right * 0.5, boxBottom)
+                // .lineTo(right * 0.4, bottom).lineTo(right * 0.3, boxBottom)
+                // // bottom line, left arc
+                .lineTo(left + radius, boxBottom)
+                .arc(left + radius, boxBottom - radius, radius, 90, 180)
+                // // left line, top arc
+                .lineTo(left, top + radius)
+                .arc(left + radius, top + radius, radius, 180, 270)
+                .close();
+        },
+    });
+};
