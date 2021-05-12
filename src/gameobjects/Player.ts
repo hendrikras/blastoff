@@ -5,23 +5,19 @@ import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
-import PerspectiveMixin, {PerspectiveMixinType} from './PerspectiveMixin';
 import Circle = Phaser.Geom.Circle;
-import CubicBezier = Phaser.Curves.CubicBezier;
 import Vector2 = Phaser.Math.Vector2;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
 import QuadraticBezier = Phaser.Curves.QuadraticBezier;
 import RadToDeg = Phaser.Math.RadToDeg;
 import Line = Phaser.Geom.Line;
-import DegToRad = Phaser.Math.DegToRad;
 
-import PerspectiveObject from '../gameobjects/PerspectiveMixin';
+import PerspectiveObject, {PerspectiveMixinType} from '../gameobjects/PerspectiveMixin';
 import SphereClass from './Sphere';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
 import Path = Phaser.Curves.Path;
-// import Ellipse = Phaser.Geom.Ellipse;
 import ELLIPSE = Phaser.Geom.ELLIPSE;
 import Ellipse = Phaser.Curves.Ellipse;
 import Shape = Phaser.GameObjects.Shape;
@@ -31,44 +27,6 @@ interface ShapeCollectionItem {
     color: number;
     shape: object;
 }
-
-const CreateBubbleShape = (scene) => {
-    return scene.add.rexCustomShapes({
-        type: 'SpeechBubble',
-        create: { lines: 1 },
-        update: function() {
-            const radius = 2;
-            const strokeColor = this.getData('strokeColor');
-            const fillColor = this.getData('fillColor');
-            // const radius = this.getData('radius');
-            // const startAngle = this.getData('startAngle');
-            // const endAngle = this.getData('endAngle');
-
-            // tslint:disable-next-line:one-variable-per-declaration
-            const left = 0, right = this.width,
-                top = 0, bottom = this.height, boxBottom = bottom;
-            this.getShapes()[0]
-                .lineStyle(2, strokeColor, 1)
-                .fillStyle(fillColor, 1)
-                // top line, right arc
-                .startAt(left + radius, top).lineTo(right - radius, top)
-                .arc(right - radius, top + radius, radius, 270, 360)
-                // right line, bottom arc
-                .lineTo(right, boxBottom - radius)
-                .arc(right - radius, boxBottom - radius, radius, 0, 90)
-                // bottom indent
-                // .lineTo(right * 0.5, boxBottom)
-                // .lineTo(right * 0.4, bottom).lineTo(right * 0.3, boxBottom)
-                // // bottom line, left arc
-                .lineTo(left + radius, boxBottom)
-                .arc(left + radius, boxBottom - radius, radius, 90, 180)
-                // // left line, top arc
-                .lineTo(left, top + radius)
-                .arc(left + radius, top + radius, radius, 180, 270)
-                .close();
-        },
-    });
-};
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -82,10 +40,16 @@ export default class Player extends CollidesWithObjects {
     private center: Circle;
     private shadow: Circle;
     private shoulderShape: Shape;
+    private feetCircle: Circle;
+    private shoe1: Shape;
+    private shoe1Counter: number;
+    private shoe2: Shape;
     private color: number;
     private size: number;
     private pathHelper: Circle;
     private head: SphereClass;
+    private step: number;
+    private now: number;
 
     private scene: Scene;
 
@@ -95,52 +59,45 @@ export default class Player extends CollidesWithObjects {
         const that = this as ContainerLite;
         const {x, y} = config;
         this.color = 0XEFCAB7;
-        const ginger = 0Xd9b380;
         const shadowColor = 0X031920;
         this.size = size;
         this.shadow = config.scene.add.circle(x, y, size * 0.85, shadowColor, 0.4);
         const quarter = size * 1.8;
         const Sphere = PerspectiveObject(SphereClass);
+        this.shoe1Counter = 0;
+        this.step = +1;
+        this.now = 0;
 
-        // @ts-ignore;
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
         this.head.setDepth(2);
 
-        this.shoulderShape = CreateBubbleShape(config.scene)
-            .setData('strokeColor', 0xffffff)
-            .setData('fillColor', 0x008800)
-            // .setData('radius', topHair1.radius)
-            // .setData('startAngle', topHair1.startAngle)
-            // .setData('endAngle', topHair1.endAngle)
-            .setPosition(x, y)
-            .setSize(size , size * 2.5);
+        const shoeColor = 0xAD661F;
+        const strokeStyle = [this.size / 10, 0x006400, 1];
+        const shoeStyle = [this.size / 5, 0x663300, 1];
+        this.shoulderShape = config.scene.add.rexRoundRectangle(x, y, size, size * 2.5, 20, 0x09d51);
+        this.shoulderShape.setStrokeStyle(...strokeStyle);
 
-        const shoe1 = CreateBubbleShape(config.scene)
-            .setData('strokeColor', 0xffffff)
-            .setData('fillColor', 0x80000)
-            .setPosition(x, y)
-            .setSize(size  , size );
+        this.shoe1 = config.scene.add.rexRoundRectangle(x, y, size * 2, size, 18, shoeColor);
+        this.shoe1.setStrokeStyle(...shoeStyle);
+        this.shoe1.setScale(0.5);
+        this.shoe2 = config.scene.add.rexRoundRectangle(x, y, size * 2, size, 18, shoeColor);
+        this.shoe2.setScale(0.5);
+        this.shoe2.setStrokeStyle(...shoeStyle);
 
-        this.scene.tweens.add({
-            targets: shoe1,
-            x: 700,
-            duration: 3000,
-            ease: 'Power2',
-            yoyo: true,
-            delay: 1000,
-        });
-        // console.log(this.shadow);
-        // this.hairTop = config.scene.add.arc(x, y, size, ginger, 0, 90);
         this.center = new Circle(x, y, size * 1.2);
         this.pathHelper = new Circle(x, y, size);
-        // that.add(this.pathHelper);
+        this.feetCircle = new Circle(x, y, size);
+
         that.add(this.shadow);
-        this.shoulderShape.depth = 0;
+        that.add(this.shoe1);
+        that.add(this.shoe2);
         that.add(this.shoulderShape);
-        // that.setScale(scale, scale);
+
+        this.shoulderShape.depth = 1;
+        this.shoe1.depth = 0;
+        this.shoe2.depth = 0;
 
         that.body.setCollideWorldBounds(true);
-
 
         this.crates = crates.children.getArray() as Crate[];
         this.speed = gridUnit * this.pace;
@@ -164,6 +121,7 @@ export default class Player extends CollidesWithObjects {
     }
 
     public update() {
+        this.hasInput = false;
         const that = this as ContainerLite;
         that.graphics.clear();
         that.graphics.lineStyle();
@@ -178,25 +136,28 @@ export default class Player extends CollidesWithObjects {
         setPosition(this.pathHelper, that);
         setPosition(this.head, that);
         setPosition(this.center, centerCenter);
+        setPosition(this.feetCircle, centerBottom);
         this.head.update();
         const { equator, pi2: all} = this.head as unknown as SphereClass;
         const {curve: eyeTopLine} = this.head.getSlice('x', 0.8);
         const {curve: eyeCenterLine, isObscured} = this.head.getSlice('x', 0.65);
         const {curve: eyeBottomLine} = this.head.getSlice('x', 0.4);
-
         that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
         that.shadow.depth = 0;
-        this.shoulderShape.depth = 0;
-        // @ts-ignore
-        const shoulderpos = this.head.centerCenter;
-        // console.log(shoulderpos)
-        that.setChildPosition(this.shoulderShape, shoulderpos.x, shoulderpos.y);
+        this.shoe1.depth = 0;
+        this.shoe2.depth = 0;
+        this.shoulderShape.depth = 1;
+        graphics.setDepth(2);
 
+        const shoulderpos = (this.head as unknown as PerspectiveMixinType).centerCenter;
+        that.setChildPosition(this.shoulderShape, shoulderpos.x, shoulderpos.y);
 
         const direction = Normalize(that.body.angle) / all;
 
         const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
         that.setChildRotation(this.shoulderShape, that.body.angle);
+        that.setChildRotation(this.shoe1, that.body.angle);
+        that.setChildRotation(this.shoe2, that.body.angle);
 
         const rightShoulder = (direction + 0.25) % 1;
         const leftShoulder =  (direction + 0.75) % 1;
@@ -296,6 +257,7 @@ export default class Player extends CollidesWithObjects {
         const topHair1 = this.getTopHairShape({x, y}, this.size, 1, 2.7);
         const topHair2 = this.getTopHairShape(point, this.size, 1.6, 1);
         unubscuredShapes.push({type: -1, shape: topHair1, color: topBlonde});
+        // unubscuredShapes.push({type: CIRCLE, shape: this.feetCircle, color: 0x000FF});
         unubscuredShapes.push({type: -1, shape: topHair2, color: topBlonde});
         unubscuredShapes.push({type: -1, shape: lok1, color: topBlonde});
         graphics.lineStyle(this.gridUnit / 4, 0x000);
@@ -317,7 +279,6 @@ export default class Player extends CollidesWithObjects {
         // @ts-ignore
         const { left: { isDown: leftDown}, right: { isDown: rightDown}, up: { isDown: upDown}, down: {isDown: downDown}} = this.cursorKeys;
         if (leftDown && !this.blockedDirection.left) {
-
             velocity.x -= 1;
             this.hasInput = true;
             this.blockedDirection.right = false;
@@ -326,7 +287,6 @@ export default class Player extends CollidesWithObjects {
             velocity.x += 1;
             this.hasInput = true;
             this.blockedDirection.left = false;
-
         }
         if (upDown && !this.blockedDirection.up) {
           velocity.y -= 1;
@@ -337,6 +297,29 @@ export default class Player extends CollidesWithObjects {
             velocity.y += 1;
             this.hasInput = true;
             this.blockedDirection.up = false;
+        }
+        if (this.hasInput) {
+            const count = 0.06;
+            if (this.now >= 1) {this.step = -count; }
+            if (this.now <= 0) {this.step = +count; }
+            this.now += this.step;
+            const a1 = (direction + 0.45) % 1;
+            const a2 = (direction + 0.05) % 1;
+
+            const b1 = (direction + 0.55) % 1;
+            const b2 = (direction + 0.95) % 1;
+            // console.log(a1);
+            const p1 = point2Vec(this.feetCircle.getPoint(a1));
+            const p2 = point2Vec(this.feetCircle.getPoint(b1));
+            graphics.fillStyle(0x0FFFFF, 1);
+            const pp = this.feetCircle.getPoint(a2);
+            const ppb = this.feetCircle.getPoint(b2);
+            const pa = p1.clone().lerp(pp, this.now);
+            const pb = p2.clone().lerp(ppb, Math.abs(this.now - 1));
+            // dp(point2Vec(pp));
+            // dp(p1);
+            that.setChildPosition(this.shoe1, pa.x, pa.y);
+            that.setChildPosition(this.shoe2, pb.x, pb.y);
         }
 
         // We normalize the velocity so that the player is always moving at the same speed, regardless of direction.
