@@ -11,6 +11,7 @@ import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
 import Line = Phaser.Geom.Line;
 import Vector2 = Phaser.Math.Vector2;
 import Circle = Phaser.Geom.Circle;
+import LINE = Phaser.Geom.LINE;
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
@@ -63,19 +64,21 @@ export default class CollidesWithObjects extends ContainerLite {
 
     protected drawShapes(items) {
 
-        items.forEach(({type, shape, color}) => {
+        items.forEach(({type, shape, color, strokeColor, lineWidth = this.gridUnit / 4}) => {
             const {graphics} = this as unknown as PerspectiveMixinType;
             if (type === CIRCLE) {
                 graphics.fillStyle(color, 1);
                 graphics.fillCircleShape(shape);
+                if (strokeColor) {
+                    graphics.lineStyle(lineWidth, strokeColor, 1);
+                    graphics.strokeCircleShape(shape);
+                }
             } else if (type === ELLIPSE) {
                 graphics.fillStyle(color, 1);
                 graphics.fillEllipseShape(shape);
-            } else if (type === -3) {
-                graphics.fillStyle(color, 1);
-                graphics.fillPoints(shape.getPoints());
-                // graphics.strokePoints(shape.getPoints());
-
+            } else if (type === LINE) {
+                graphics.lineStyle(lineWidth, color, 1);
+                graphics.strokeLineShape(shape);
             } else if (type === -2) {
                 graphics.lineStyle(this.gridUnit / 4, color, 1);
                 graphics.strokePoints(shape.getPoints());
@@ -86,9 +89,8 @@ export default class CollidesWithObjects extends ContainerLite {
                 graphics.arc(x, y, radius, startAngle, endAngle, anticlockwise);
                 graphics.fillPath();
             } else {
-                graphics.lineStyle(this.gridUnit / 4, color, 1);
-                graphics.strokeLineShape(shape);
-
+                graphics.fillStyle(color, 1);
+                graphics.fillPoints(shape.getPoints());
             }
         });
         items?.shape?.destroy();
