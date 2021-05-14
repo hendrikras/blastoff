@@ -40,12 +40,12 @@ export default class Enemy extends CollidesWithObjects {
         super(config.scene, config.x, config.y, size, scale);
         const {x, y} = config;
         const that = this as ContainerLite;
-
         that.body.setCollideWorldBounds(true);
         this.color = 0X0B6382;
         const shadowColor = 0X031920;
         this.size = size;
-        this.shadow = config.scene.add.circle(x, y, size * 0.85, shadowColor, 0.4);
+        this.shadow = config.scene.add.circle(x, y, size / 3.5, shadowColor, 0.4);
+        that.add(this.shadow);
         this.center = new Circle(x, y, size * 1.2);
         this.pathHelper = new Circle(x, y, size);
 
@@ -53,7 +53,6 @@ export default class Enemy extends CollidesWithObjects {
         const quarter = size * 2;
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
         this.head.setDepth(2);
-
         that.setScale(scale, scale);
         this.speed = gridUnit * 20;
         this.gridUnit = gridUnit / 10;
@@ -69,7 +68,7 @@ export default class Enemy extends CollidesWithObjects {
       this.blockedDirection[direction] = true;
     }
     public exterminate(player: Vector2) {
-        const that = (this as unknown as GameObjects.Container);
+        const that = (this as ContainerLite);
         const enemyVelocity = new Vector2(player.x - that.x , player.y  - that.y).normalize();
         const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
         const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
@@ -92,6 +91,8 @@ export default class Enemy extends CollidesWithObjects {
 
       public update() {
           const that = (this as ContainerLite);
+          that.graphics.setDepth(2);
+
           if (this.pushedCrate) {
             if (this.pushedCrate.x - that.x > this.pushedCrate.height || this.pushedCrate.y - that.y > this.pushedCrate.height) {
                 this.pushedCrate.enemy = null;
@@ -117,7 +118,7 @@ export default class Enemy extends CollidesWithObjects {
           const feetCircle = new Circle(hoverPosition.x, hoverPosition.y, sphere.radius / 2.3);
           graphics.fillCircleShape(feetCircle);
 
-          // that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
+          that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
           const direction = Normalize(that.body.angle) / all;
 
           const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
@@ -148,8 +149,8 @@ export default class Enemy extends CollidesWithObjects {
 
           const type = CIRCLE;
           const handColor = 0X2405B;
-          const hand1Shape = {type, shape: new Circle(hand1.x, hand1.y, this.gridUnit / 1.5), color: handColor};
-          const hand2Shape = {type, shape: new Circle(hand2.x, hand2.y, this.gridUnit / 1.5), color: handColor};
+          const hand1Shape = {type, shape: new Circle(hand1.x, hand1.y, this.gridUnit), color: handColor};
+          const hand2Shape = {type, shape: new Circle(hand2.x, hand2.y, this.gridUnit), color: handColor};
           graphics.fillStyle(this.color, 1);
           graphics.fillPath();
           const nose = relativeAngle - direction;
@@ -158,8 +159,9 @@ export default class Enemy extends CollidesWithObjects {
           const eye1 = eyeLine.getPoint(eye1Angle);
           const eye2 = eyeLine.getPoint(eye2Angle);
           const faceFeatColor = 0x16D8D8;
-          const arm1 = {type: LINE,  shape: new Line(shoulder1Point.x, shoulder1Point.y, hand1.x, hand1.y), color: 0x000};
-          const arm2 = {type: LINE,  shape: new Line(shoulder2Point.x, shoulder2Point.y, hand2.x, hand2.y), color: 0x000};
+          const lineWidth = this.size / 4;
+          const arm1 = {type: LINE, lineWidth,  shape: new Line(shoulder1Point.x, shoulder1Point.y, hand1.x, hand1.y), color: 0x000};
+          const arm2 = {type: LINE, lineWidth, shape: new Line(shoulder2Point.x, shoulder2Point.y, hand2.x, hand2.y), color: 0x000};
           let mouth2 = equator.getPoint(eye2Angle);
           let mouth1 = equator.getPoint(eye1Angle);
 
@@ -195,7 +197,7 @@ export default class Enemy extends CollidesWithObjects {
 
           graphics.fillStyle(faceFeatColor);
 
-          const wh = this.gridUnit / 2.5;
+          const wh = this.gridUnit / 2;
 
           if (isObscured(eye1)) {
                 const shape = new Circle(eye1.x, eye1.y, wh);

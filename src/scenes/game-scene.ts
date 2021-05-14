@@ -134,9 +134,9 @@ export class GameScene extends Phaser.Scene {
     this.crates.add(this.prison);
     this.crates.setDepth(3);
     this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, quarterCrate, this.gridUnit / 4);
-    this.player.setDepth(2);
-    this.enemy = new EnemyType({scene: this, x: centerX, y: top + quarterCrate * 2}, this.gridUnit, quarterCrate, this.gridUnit / 4);
-    this.enemy.setDepth(2);
+    // this.player.setDepth(2);
+    this.enemy = new EnemyType({scene: this, x: centerX, y: top + quarterCrate * 2}, this.gridUnit, quarterCrate * 1.2, this.gridUnit / 4);
+    // this.enemy.setDepth(2);
     // @ts-ignore
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
     // @ts-ignore
@@ -175,7 +175,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.player.isMoving() ) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
-      // this.enemy.exterminate(pos);
+      this.enemy.exterminate(pos);
     }
 
     this.player.update();
