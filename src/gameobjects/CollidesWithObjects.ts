@@ -4,7 +4,7 @@ import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import {PerspectiveMixinType} from './PerspectiveMixin';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import ELLIPSE = Phaser.Geom.ELLIPSE;
-import {lineIntersect, point2Vec} from '../helpers';
+import {lineIntersect, point2Vec, unblockBut} from '../helpers';
 import Normalize = Phaser.Math.Angle.Normalize;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
@@ -12,56 +12,79 @@ import Line = Phaser.Geom.Line;
 import Vector2 = Phaser.Math.Vector2;
 import Circle = Phaser.Geom.Circle;
 import LINE = Phaser.Geom.LINE;
+import Path = Phaser.Curves.Path;
+import QuadraticBezier = Phaser.Curves.QuadraticBezier;
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
     protected pushedCrate: Crate | null;
     protected gridUnit: number;
-    protected xThreshold: number;
-    protected yThreshold: number;
     protected blockedDirection: Types.Physics.Arcade.ArcadeBodyCollision = { up: false, down: false, right: false, left: false, none: true };
     constructor(scene, x: number, y: number, size: number, scale: number) {
         super(scene, x, y, size, size);
-
-        // constructor(scene, x, y, width, height, children) {
-        //     super(scene, x, y, width, height, children);
-        // this.setSize(size, size);
         scene.add.existing(this);
         scene.physics.world.enable(this);
-        // this.setScale(scale);
-
     }
     public pushCrate = (dir: string, crate: Crate) => console.error('not implemented!');
-    protected hasReachedCrateCorner = (axis: string) => (this[`${axis}Threshold`] - this[axis] / this.gridUnit > this.distanceToBoxCorner || this[`${axis}Threshold`] - this[axis] / this.gridUnit < - this.distanceToBoxCorner);
-    protected setCollidedObject(crate: Crate) {
-      if (!this.distanceToBoxCorner) {
-        this.distanceToBoxCorner = (this as unknown as GameObjects.Container).width + crate.width / 2;
-      }
-    }
-    protected resetBlockedDirections = () =>  ['x', 'y'].forEach((axis: string) => {
-        if (this.hasReachedCrateCorner(axis)) {
-            axis === 'x' ? this.blockedDirection.down = false : this.blockedDirection.right = false;
-            axis === 'x' ? this.blockedDirection.up = false : this.blockedDirection.left = false;
-            this[`${axis}Threshold`] = this[axis];
+    protected resetBlockedDirections = (angle) => {
+        if (angle > 0.78 && angle < 2.29 ) {
+            unblockBut('up', this.blockedDirection);
+        } else if (angle > -2.29 && angle < -0.78 ) {
+            unblockBut('down', this.blockedDirection);
+
+        } else if (angle > -0.79 && angle < 0.78 ) {
+            unblockBut('left', this.blockedDirection);
+
+        } else {
+            unblockBut('right', this.blockedDirection);
         }
-    })
+    }
     protected handleCrateCollison = (crate: Crate) => {
-        const that = (this as unknown as GameObjects.Container);
-        const relativeX = (crate.x / this.gridUnit - that.x / this.gridUnit);
-        const relativeY = (crate.y / this.gridUnit - that.y / this.gridUnit );
-        const edge = crate.body.height / 2;
-
-        if (relativeY < edge && (relativeX < edge && relativeX > -edge) ) {
+        const { point } = this as unknown as PerspectiveMixinType;
+        const angle = BetweenPoints(crate, point);
+        if (angle > 0.78 && angle < 2.29 ) {
             this.pushCrate('up', crate);
-        } else if (relativeY > edge && (relativeX < edge && relativeX > -edge)) {
+        } else if (angle > -2.29 && angle < -0.78 ) {
             this.pushCrate('down', crate);
-        } else if ( relativeX > edge && (relativeY < edge && relativeY > -edge) ) {
-            this.pushCrate('right', crate);
-        } else if ( relativeX < edge && (relativeY < edge && relativeY > -edge) ) {
+        } else if (angle > -0.79 && angle < 0.78 ) {
             this.pushCrate('left', crate);
+        } else {
+            this.pushCrate('right', crate);
         }
     }
+    protected getTrepazoid(circle1, circle2, color, percent, intersectPoint: Vector2 | null = null) {
+        const { graphics, point } = this as unknown as PerspectiveMixinType;
+        let cross;
+        if (!intersectPoint) {
+            const ext = new Line(circle1.x, circle1.y, circle2.x, circle2.y);
+            const crossb = Phaser.Geom.Line.Extend(ext, 0, this.gridUnit * 40);
+            const cp = point2Vec(circle1.getPoint(0));
+            const cp2 = point2Vec(circle2.getPoint(0));
+            const crossa = Phaser.Geom.Line.Extend(new Line(cp.x, cp.y, cp2.x, cp2.y), this.gridUnit * 40);
+            cross = lineIntersect(crossb.getPointA(), crossb.getPointB(), crossa.getPointA(), crossa.getPointB());
+            graphics.lineStyle(3, 0x000, 1);
+        } else {
+            cross = intersectPoint;
+        }
 
+        const tp = this.getExternalTangent(circle1, circle2, cross);
+        if (tp && cross) {
+            const {p1, p2, p3, p4} = tp;
+            const shape = new Path();
+            shape.moveTo(p1);
+            shape.lineTo(p2);
+            shape.lineTo(p4);
+            shape.lineTo(p3);
+            const mi = cross.clone().lerp(point, percent);
+            if (!intersectPoint) {
+                const curve = new QuadraticBezier(p1, mi, p2);
+                shape.add(curve);
+            }
+            shape.closePath();
+
+            return {type: -3, shape, color};
+        }
+    }
     protected drawShapes(items) {
 
         items.forEach(({type, shape, color, strokeColor, lineWidth = this.gridUnit / 4}) => {

@@ -40,10 +40,10 @@ export const collidesOnAxes = (crate: Crate, item: Crate, direction: ArcadeBodyC
   );
 };
 export const Collision4Direction = (dir: Direction) => ({none: dir === Direction.none, up: dir === Direction.up, down: dir === Direction.down, left: dir === Direction.left, right: dir === Direction.right });
-export const impassable = (crate: Crate, otherCrate: Crate, speed: number, direction: ArcadeBodyCollision, world: ArcadeBodyBounds): boolean =>
+export const impassable = (crate: Crate, otherCrate: Crate | undefined, speed: number, direction: ArcadeBodyCollision, world: ArcadeBodyBounds): boolean =>
     reachedBound(crate, speed, direction, world) || blockedInDirection(crate, otherCrate, speed, direction) || crate instanceof Wall;
 
-export const blockedInDirection = (crate: Crate, otherCrate: Crate, speed: number, direction: ArcadeBodyCollision): boolean => {
+export const blockedInDirection = (crate: Crate, otherCrate: Crate | undefined, speed: number, direction: ArcadeBodyCollision): boolean => {
   if (crate.enemy) {
     return true;
   }
@@ -130,9 +130,6 @@ export const CreateBubbleShape = (scene) => {
             const radius = 20;
             const strokeColor = this.getData('strokeColor');
             const fillColor = this.getData('fillColor');
-            // const radius = this.getData('radius');
-            // const startAngle = this.getData('startAngle');
-            // const endAngle = this.getData('endAngle');
 
             // tslint:disable-next-line:one-variable-per-declaration
             const left = 0, right = this.width,
@@ -146,10 +143,6 @@ export const CreateBubbleShape = (scene) => {
                 // right line, bottom arc
                 .lineTo(right, boxBottom - radius)
                 .arc(right - radius, boxBottom - radius, radius, 0, 90)
-                // bottom indent
-                // .lineTo(right * 0.5, boxBottom)
-                // .lineTo(right * 0.4, bottom).lineTo(right * 0.3, boxBottom)
-                // // bottom line, left arc
                 .lineTo(left + radius, boxBottom)
                 .arc(left + radius, boxBottom - radius, radius, 90, 180)
                 // // left line, top arc
@@ -159,3 +152,10 @@ export const CreateBubbleShape = (scene) => {
         },
     });
 };
+
+export const getArcShape = (position, radius, hl1, hl2, direction) => ({ x: position.x, y: position.y, radius, startAngle: direction + hl1 % Math.PI, endAngle: direction - hl2 % Math.PI });
+export const unblockBut = (direction, items) => Object.entries(items).forEach((item) => {
+    if (item[0] !== direction) {
+        items[item[0]] = false;
+    }
+});
