@@ -1,5 +1,5 @@
 import {Physics, Scene, Types} from 'phaser';
-import {collidesOnAxes, impassable, lineIntersect, point2Vec, pyt, setPosition} from '../helpers';
+import {collidesOnAxes, getArcShape, impassable, lineIntersect, point2Vec, pyt, setPosition} from '../helpers';
 
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
@@ -9,7 +9,6 @@ import Circle = Phaser.Geom.Circle;
 import Vector2 = Phaser.Math.Vector2;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
-import QuadraticBezier = Phaser.Curves.QuadraticBezier;
 import RadToDeg = Phaser.Math.RadToDeg;
 import Line = Phaser.Geom.Line;
 
@@ -17,7 +16,6 @@ import PerspectiveObject, {PerspectiveMixinType} from '../gameobjects/Perspectiv
 import SphereClass from './Sphere';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
-import Path = Phaser.Curves.Path;
 import ELLIPSE = Phaser.Geom.ELLIPSE;
 import Ellipse = Phaser.Curves.Ellipse;
 import Shape = Phaser.GameObjects.Shape;
@@ -39,9 +37,7 @@ export default class Player extends CollidesWithObjects {
     private worldBounds: ArcadeBodyBounds;
 
     private center: Circle;
-    private skirt: Shape;
     private shadow: Circle;
-    private shoulderShape: Shape;
     private feetCircle: Circle;
     private shoe1: Shape;
     private shoe1Counter: number;
@@ -52,7 +48,6 @@ export default class Player extends CollidesWithObjects {
     private head: SphereClass;
     private step: number;
     private now: number;
-    private pushing: boolean;
 
     private scene: Scene;
 
@@ -70,18 +65,13 @@ export default class Player extends CollidesWithObjects {
         this.shoe1Counter = 0;
         this.step = +1;
         this.now = 0;
-        // this.scale = scale;
 
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
         this.head.setDepth(2);
         this.head.setScale(scale);
 
         const shoeColor = 0xAD661F;
-        const strokeStyle = [this.size / 10, 0x006400, 1];
         const shoeStyle = [this.size / 5, 0x663300, 1];
-        // this.shoulderShape = config.scene.add.rexRoundRectangle(x, y, size, size * 2.5, 20, 0x09d51);
-        // this.shoulderShape.setStrokeStyle(...strokeStyle);
-
         this.shoe1 = config.scene.add.rexRoundRectangle(x, y, size * 2, size, size / 2, shoeColor);
         this.shoe1.setStrokeStyle(...shoeStyle);
         this.shoe1.setScale(0.5);
@@ -89,19 +79,12 @@ export default class Player extends CollidesWithObjects {
         this.shoe2.setScale(0.5);
         this.shoe2.setStrokeStyle(...shoeStyle);
         this.center = new Circle(x, y, size * 1.2);
-        // this.skirt = config.scene.add.rexRoundRectangle(x, y, size * 1.8, size * 1.8, 20, 0x006400);
-        // this.skirt = new Circle(x, y, size * 1.8);
         this.pathHelper = new Circle(x, y, size);
         this.feetCircle = new Circle(x, y, size);
 
         that.add(this.shadow);
         that.add(this.shoe1);
         that.add(this.shoe2);
-        // that.add(this.skirt);
-        // that.add(this.shoulderShape);
-
-        // this.shoulderShape.depth = 1;
-        // this.skirt.depth = 0;
         this.shoe1.depth = 0;
         this.shoe2.depth = 0;
 
@@ -122,7 +105,6 @@ export default class Player extends CollidesWithObjects {
     public resetPlayerOnCrate() {
       if (this.pushedCrate && this.pushedCrate.player) {
         this.pushedCrate.player = false;
-        // if (this.pushedCrate.enemy)  this.pushedCrate.enemy.chasePlayer = true;
         this.pushedCrate.enemy = null;
       }
       this.pushedCrate = null;
@@ -135,9 +117,6 @@ export default class Player extends CollidesWithObjects {
         that.graphics.lineStyle();
         const obscuredShapes: ShapeCollectionItem[] = [];
         const unubscuredShapes: ShapeCollectionItem[] = [];
-
-        // that.setChildPosition(this.pathHelper, that.x, that.y);
-        // that.setChildPosition(this.head, that.x, that.y);
 
         that.predraw();
         const { vertices: v, x, y, dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
@@ -154,21 +133,13 @@ export default class Player extends CollidesWithObjects {
         that.shadow.depth = 0;
         this.shoe1.depth = 0;
         this.shoe2.depth = 0;
-        // this.skirt.depth = 0;
-        // this.shoulderShape.depth = 1;
         graphics.setDepth(2);
-
-        const shoulderpos = (this.head as unknown as PerspectiveMixinType).centerCenter;
-        // that.setChildPosition(this.shoulderShape, shoulderpos.x, shoulderpos.y);
-        // that.setChildPosition(this.skirt, this.center.x, this.center.y);
 
         const direction = Normalize(that.body.angle) / all;
 
         const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
-        // that.setChildRotation(this.shoulderShape, that.body.angle);
         that.setChildRotation(this.shoe1, that.body.angle);
         that.setChildRotation(this.shoe2, that.body.angle);
-        // that.setChildRotation(this.skirt, that.body.angle);
 
         const rightShoulder = (direction + 0.25) % 1;
         const leftShoulder =  (direction + 0.75) % 1;
@@ -178,13 +149,7 @@ export default class Player extends CollidesWithObjects {
         const hand1 = new Vector2(Circle.GetPoint(this.center, rightShoulder));
         const hand2 = new Vector2(Circle.GetPoint(this.center, leftShoulder));
 
-
         graphics.fillStyle(this.color);
-        const type = CIRCLE;
-        const handColor = 0X2405B;
-        // const hand1Shape = {type, shape: new Circle(hand1.x, hand1.y, this.gridUnit / 1.5), color: handColor};
-        // const hand2Shape = {type, shape: new Circle(hand2.x, hand2.y, this.gridUnit / 1.5), color: handColor};
-        // console.log(this.gridUnit, this.size * 0.38465);
         graphics.fillStyle(this.color, 1);
         graphics.fillPath();
         const nose = relativeAngle - direction;
@@ -194,8 +159,6 @@ export default class Player extends CollidesWithObjects {
         const cheek2 = nose + 0.12 % 1;
         const faceFeatColor = 0xFFFFFF;
 
-        // dp(shoulder1Point);
-        // dp(hand2)
         const eye1Bottom = eyeBottomLine.getPoint(eye1Angle);
         const eye2Bottom = eyeBottomLine.getPoint(eye2Angle);
         const eyeTop = eyeTopLine.getPoint(eye1Angle);
@@ -216,12 +179,9 @@ export default class Player extends CollidesWithObjects {
         const eye2 = new Ellipse( eye2Center.x, eye2Center.y, this.gridUnit / 2,  eye2Distance / 3, 0, 360, true, eye2Rotation);
         const eye2Iris = new Ellipse( eye2Center.x, eye2Center.y, this.gridUnit / 4, eye2Distance / 4, 0, 360, true, eye2Rotation);
         const irisColor = 0x357388;
-        // obscuredShapes.push(hand1Shape);
-        // obscuredShapes.push({type: CIRCLE, shape: this.feetCircle, color: 0x000FF});
         this.walk(direction);
 
         if (!isObscured(eye1Iris)) {
-
             unubscuredShapes.push({type: ELLIPSE, shape: eye1, color: 0xFFFFFF});
             unubscuredShapes.push({type: ELLIPSE, shape: eye1Iris, color: irisColor});
         }
@@ -236,7 +196,7 @@ export default class Player extends CollidesWithObjects {
         obscuredShapes.push(leg2);
         const torso = new Circle(centerCenter.x, centerCenter.y, this.gridUnit * 2);
         const skirtLength = centerCenter.clone().lerp(centerBottom, 0.7);
-        const skirt = this.drawTrepazoid(this.pathHelper, new Circle( skirtLength.x, skirtLength.y, this.gridUnit * 2.55), 0x006400, 0.97);
+        const skirt = this.getTrepazoid(this.pathHelper, new Circle( skirtLength.x, skirtLength.y, this.gridUnit * 2.55), 0x006400, 0.97);
         if (skirt) {
             obscuredShapes.push(skirt);
         }
@@ -244,7 +204,7 @@ export default class Player extends CollidesWithObjects {
 
         let handPos1 = hand1;
         let handPos2 = hand2;
-        if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) < this.size * 3.5) {
+        if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) < this.size * 4.5) {
             const {centerCenter: center} = that.head;
             const circle = new Circle(center.x, center.y, this.size * 1.4);
             const a2 = (direction + 0.1) % 1;
@@ -273,14 +233,13 @@ export default class Player extends CollidesWithObjects {
         const topBlonde = 0xF8E68B;
         const bottomBlonde = 0xD6C87F;
         const bunp = equator.getPoint(relativeAngle - direction - 0.5 % 1);
-        const hair = this.drawTrepazoid(this.pathHelper, new Circle( bunp.x, bunp.y, this.gridUnit * 2.55), bottomBlonde, 0.96);
+        const hair = this.getTrepazoid(this.pathHelper, new Circle( bunp.x, bunp.y, this.gridUnit * 2.55), bottomBlonde, 0.96);
         if (hair) {
             unubscuredShapes.push(hair);
         }
-        const topHair1 = this.getTopHairShape({x, y}, this.size, 1, 2.7);
-        const topHair2 = this.getTopHairShape(point, this.size, 1.6, 1);
+        const topHair1 = getArcShape(point, this.size, 1, 2.7, that.body.angle);
+        const topHair2 = getArcShape(point, this.size, 1.6, 1, that.body.angle);
         unubscuredShapes.push({type: -1, shape: topHair1, color: topBlonde, strokeColor: 0x000});
-        // unubscuredShapes.push({type: CIRCLE, shape: this.feetCircle, color: 0x000FF});
         unubscuredShapes.push({type: -1, shape: topHair2, color: topBlonde, strokeColor: 0x000});
         unubscuredShapes.push({type: -1, shape: lok1, color: topBlonde});
         graphics.lineStyle(this.gridUnit / 4, 0x000);
@@ -297,9 +256,6 @@ export default class Player extends CollidesWithObjects {
         graphics.fillStyle(this.color, 1);
 
         dp(nosePoint);
-
-
-
         graphics.fillStyle(faceFeatColor, 1);
 
         graphics.fillStyle(0xFFFFFF, 1);
@@ -315,10 +271,12 @@ export default class Player extends CollidesWithObjects {
       this.handleCrateCollison(crate);
     }
     private walk(direction) {
-        const { graphics } = this as unknown as PerspectiveMixinType;
+        const { graphics, point } = this as unknown as PerspectiveMixinType;
         const that = this as ContainerLite;
         // re-enable moving in a certain direction if passed a blockade
-        this.resetBlockedDirections();
+        if (this.pushedCrate) {
+            this.resetBlockedDirections(BetweenPoints(this.pushedCrate, point));
+        }
 
         // Every frame, we create a new velocity for the sprite based on what keys the player is holding down.
         const velocity = new Phaser.Math.Vector2(0, 0);
@@ -362,60 +320,12 @@ export default class Player extends CollidesWithObjects {
             const pb = p2.clone().lerp(ppb, Math.abs(this.now - 1));
             that.setChildPosition(this.shoe1, pa.x, pa.y);
             that.setChildPosition(this.shoe2, pb.x, pb.y);
-            // We normalize the velocity so that the player is always moving at the same speed, regardless of direction.
           }
+        // We normalize the velocity so that the player is always moving at the same speed, regardless of direction.
         const normalizedVelocity = velocity.normalize();
         that.body.setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
     }
-    private drawTrepazoid(circle1, circle2, color, percent) {
-        const { graphics, point } = this as unknown as PerspectiveMixinType;
-
-        const ext = new Line(circle1.x, circle1.y, circle2.x, circle2.y);
-        const crossb = Phaser.Geom.Line.Extend(ext, 0, this.gridUnit * 40);
-        const cp = point2Vec(circle1.getPoint(0));
-        const cp2 = point2Vec(circle2.getPoint(0));
-        const crossa = Phaser.Geom.Line.Extend(new Line(cp.x, cp.y, cp2.x, cp2.y), this.gridUnit * 40);
-        const cross = lineIntersect(crossb.getPointA(), crossb.getPointB(), crossa.getPointA(), crossa.getPointB());
-        graphics.lineStyle(3, 0x000, 1);
-
-        const tp = this.getExternalTangent(circle1, circle2, cross);
-        if (tp && cross) {
-            const {p1, p2, p3, p4} = tp;
-            const shape = new Path();
-            shape.moveTo(p1);
-            shape.lineTo(p2);
-            shape.lineTo(p4);
-            shape.lineTo(p3);
-            const mi = cross.clone().lerp(point, percent);
-            const curve = new QuadraticBezier(p1, mi, p2);
-            shape.closePath();
-            shape.add(curve);
-
-            return {type: -3, shape, color};
-        }
-    }
-    // private getPointOnHead(callbackp1, point1) {
-    //     if (callbackp1) {
-    //         point1 = point1.distance(callbackp1[0]) < point1.distance(callbackp1[1]) ? callbackp1[0] : callbackp1[1];
-    //     }
-    //     return point1;
-    // }
-    private getTopHairShape(position, radius, hl1, hl2) {
-        const { shape, pi2: all } = this.head;
-        const direction = (this as ContainerLite).body.angle;
-
-        const shoulder1 = direction + hl1 % Math.PI;
-        const shoulder2 =  direction - hl2 % Math.PI;
-
-        return { x: position.x, y: position.y, radius, startAngle: shoulder1, endAngle: shoulder2 };
-    }
-    private getMiddle(top, bottom, floorTop, floorBottom) {
-        const middle = lineIntersect(top, floorBottom, bottom, floorTop);
-        return middle;
-    }
     private pushCrateImpl(direction: string, crate: Crate) {
-        this.setCollidedObject(crate);
-        this.pushing = true;
         const up = direction === 'up';
         const down = direction === 'down';
         const right = direction === 'right';
@@ -427,7 +337,6 @@ export default class Player extends CollidesWithObjects {
             .sort((a: Crate, b: Crate) => a[axis] < b[axis] ? -1 : 1 );
         const collidingCrate = up || left ? selection.pop() : selection[0];
 
-        // @ts-ignore
         if (impassable(crate, collidingCrate, this.factor, collision, this.worldBounds)) {
             this.blockedDirection = { up, down, right, left, none: false};
             const opAxis = right || left ? 'y' : 'x';

@@ -15,8 +15,6 @@ import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
 import {point2Vec, pyt, getVector, lineIntersect, setPosition} from '../helpers';
 import DegToRad = Phaser.Math.DegToRad;
-import Path = Phaser.Curves.Path;
-import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
 
 interface ShapeCollectionItem {
     type: number;
@@ -73,7 +71,7 @@ export default class Enemy extends CollidesWithObjects {
         const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
         const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
 
-        this.resetBlockedDirections();
+        // this.resetBlockedDirections();
 
         (that.body as Physics.Arcade.Body).setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
 
@@ -133,18 +131,11 @@ export default class Enemy extends CollidesWithObjects {
           const hand2 = new Vector2(Circle.GetPoint(this.center, leftShoulder));
           graphics.fillStyle(this.color);
 
-          const torso = new Path();
-          const tp = this.getExternalTangent(this.head.shape, feetCircle, vanishPoint);
-
-          if (tp) {
-              const {p1, p2, p3, p4} = tp;
-              torso.moveTo(p1);
-              torso.lineTo(p2);
-              torso.lineTo(p4);
-              torso.lineTo(p3);
-              torso.closePath();
-              obscuredShapes.push({type: -3, shape: torso, color: this.color});
+          const torso = this.getTrepazoid(this.head.shape, feetCircle, this.color, 0, vanishPoint);
+          if (torso) {
+              obscuredShapes.push(torso);
           }
+
           obscuredShapes.push({type: -1, shape: feetCircle, color: this.color});
 
           const type = CIRCLE;
@@ -222,7 +213,7 @@ export default class Enemy extends CollidesWithObjects {
           graphics.lineStyle(0, 0);
 
         // re-enable moving in a certain direction if passed a blockade
-          this.resetBlockedDirections();
+        //   this.resetBlockedDirections();
 
           }
     private getEyeShape(position, radius) {
