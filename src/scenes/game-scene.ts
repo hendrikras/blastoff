@@ -10,14 +10,15 @@ import {
   Collision4Direction,
   Direction,
   getGameHeight,
-  getGameWidth,
-  reachedBound
+  getGameWidth, point2Vec,
+  reachedBound,
 } from '../helpers';
 import PerspectiveObject from '../gameobjects/PerspectiveMixin';
 import CrateFace from '../gameobjects/CrateFace';
 import PrisonFace from '../gameobjects/PrisonFace';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import EventEmitter = Phaser.Events.EventEmitter;
+import Vector2 = Phaser.Math.Vector2;
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -84,7 +85,6 @@ export class GameScene extends Phaser.Scene {
       visible: true,
       repeat: 9,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
-      // setXY: { x: 0, y: this.gridUnit * 10,  stepY: this.gridUnit * 10 },
       collideWorldBounds: true,
       key: 'crates',
     };
@@ -93,11 +93,6 @@ export class GameScene extends Phaser.Scene {
     this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
     const quarterCrate = this.gridUnit * 2.6;
 
-    // this.prison = new Crate(this, 0 , Phaser.Math.Between(top + half , bottom - half), 'prison');
-    // const wall = new Crate(this, this.physics.world.bounds.centerX , 0, 'stars', new Vector2(this.gridUnit * 100, this.gridUnit * 100));
-    // wall.setScale(0.5);
-    // wall.setDepth(-1);
-    // wall.update();
     this.prison.setScale(this.gridUnit / 14.1 );
 
     this.prison.depth = 2;
@@ -147,14 +142,26 @@ export class GameScene extends Phaser.Scene {
     this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
     this.fallingCrates = [];
     // @ts-ignore
-    this.crates.children.iterate((crate: Crate, idx: number) => {
+
+    function placeCrate(crate, crates) {
+      crate.setRandomPosition(startX, startY, width, height);
+      crates.children.iterate((item) => {
+        if (item !== crate) {
+          if (point2Vec(item as Vector2).distance(crate) < crate.width) {
+            placeCrate(crate, crates);
+          }
+        }
+      });
+    }
+
+    this.crates.children.iterate((crate, idx) => {
       console.log(crate.name);
       if (crate.name !== 'prison') {
-        crate.setRandomPosition(startX, startY, width, height);
+        placeCrate(crate, this.crates);
       } else {
         crate.name = `crate${idx}`;
       }
-      this.fallingCrates.push(crate);
+      this.fallingCrates.push(crate as Crate);
     });
     this.boundedCrates = [];
     this.updatePerspectiveDrawing();
@@ -175,7 +182,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.player.isMoving() ) {
       const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
-      this.enemy.exterminate(pos);
+      // this.enemy.exterminate(pos);
     }
     this.player.update();
     this.enemy.update();
@@ -202,7 +209,7 @@ export class GameScene extends Phaser.Scene {
     this.scene.pause();
   }
   private dropEverything() {
-    const blockedCrates = [];
+    const blockedCrates: Crate[] = [];
     this.fallingCrates.forEach((crate: Crate) => {
 
       const none = false;
@@ -215,7 +222,6 @@ export class GameScene extends Phaser.Scene {
 
       selection.forEach((collidingCrate) => {
         if (blockedInDirection(crate, collidingCrate, this.gravitySpeed, collision)) {
-          // @ts-ignore
           blockedCrates.push(crate);
         }
       });
@@ -224,7 +230,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
     this.fallingCrates
-        // .filter( ( crate ) => !blockedCrates.includes( crate ) )
+        .filter( ( crate ) => !blockedCrates.includes( crate ) )
         .filter( ( crate ) => !this.boundedCrates.includes( crate ) )
         .forEach((crate) => {
           if (crate instanceof Crate) {
@@ -236,10 +242,11 @@ export class GameScene extends Phaser.Scene {
     this.enemy.y += this.gravitySpeed;
   }
   private blastOff() {
+
     this.rocket.visible = false;
     this.rocketCollider.destroy();
     this.backgoundInc = 10;
-    this.physics.add.overlap(this.prison, this.enemy.children, () => {
+    this.physics.add.overlap(this.prison, this.enemy, () => {
 
         if (this.enemy.y <= this.physics.world.bounds.bottom - this.enemy.height) {
           this.endGame(true);
