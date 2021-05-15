@@ -13,8 +13,9 @@ import QuadraticBezier = Phaser.Curves.QuadraticBezier;
 import SphereClass from './Sphere';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
-import {point2Vec, pyt, getVector, lineIntersect, setPosition} from '../helpers';
+import {point2Vec, pyt, setPosition} from '../helpers';
 import DegToRad = Phaser.Math.DegToRad;
+import GameObject = Phaser.GameObjects.GameObject;
 
 interface ShapeCollectionItem {
     type: number;
@@ -66,15 +67,18 @@ export default class Enemy extends CollidesWithObjects {
       this.blockedDirection[direction] = true;
     }
     public exterminate(player: Vector2) {
-        const that = (this as ContainerLite);
-        const enemyVelocity = new Vector2(player.x - that.x , player.y  - that.y).normalize();
+        const {point} = this as unknown as PerspectiveMixinType;
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+
+        const enemyVelocity = new Vector2(player.x - point.x , player.y  - point.y).normalize();
         const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
         const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
 
-        // this.resetBlockedDirections();
+        if (this.pushedCrate) {
+            this.resetBlockedDirections(BetweenPoints(this.pushedCrate, point));
+        }
 
-        (that.body as Physics.Arcade.Body).setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
-
+        body.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
         if (this.pushedCrate && this.playersCrate !== crate) {
@@ -101,11 +105,8 @@ export default class Enemy extends CollidesWithObjects {
           const obscuredShapes: ShapeCollectionItem[] = [];
           const unubscuredShapes: ShapeCollectionItem[] = [];
 
-          // that.setChildPosition(this.pathHelper, that.x, that.y);
-          // that.setChildPosition(this.head, that.x, that.y);
           that.predraw();
           const { vertices: v, x, y, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
-          // that.setChildPosition(this.center, centerCenter.x, centerCenter.y);
           setPosition(this.pathHelper, that);
           setPosition(this.head, that);
           setPosition(this.center, centerCenter);
@@ -211,10 +212,6 @@ export default class Enemy extends CollidesWithObjects {
           graphics.fillStyle(faceFeatColor, 1);
           this.drawShapes(unubscuredShapes);
           graphics.lineStyle(0, 0);
-
-        // re-enable moving in a certain direction if passed a blockade
-        //   this.resetBlockedDirections();
-
           }
     private getEyeShape(position, radius) {
         const { shape, pi2: all } = this.head;
@@ -245,7 +242,6 @@ export default class Enemy extends CollidesWithObjects {
         const that = (this as unknown as GameObjects.Container);
         this.setBlockedDirection(direction);
         const opAxis = direction === 'right' || direction ===  'left' ? 'y' : 'x';
-        this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
         (that.body as Physics.Arcade.Body).setVelocity(0);
     }
 }

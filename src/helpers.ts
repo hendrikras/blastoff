@@ -110,9 +110,6 @@ export function calculateCircleCenter(A, B, C) {
     return new Vector2(x, y);
 
 }
-
-export const getVector = (cx, cy, a, r) => new Vector2(cx + r * Math.cos(a), cy + r * Math.sin(a));
-export const angle = (c1, c2) => Math.atan2(c1.y - c2.y, c1.x - c2.x);
 interface HasPos {
     x: number;
     y: number;
