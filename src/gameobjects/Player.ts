@@ -70,9 +70,11 @@ export default class Player extends CollidesWithObjects {
         this.shoe1Counter = 0;
         this.step = +1;
         this.now = 0;
+        // this.scale = scale;
 
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
         this.head.setDepth(2);
+        this.head.setScale(scale);
 
         const shoeColor = 0xAD661F;
         const strokeStyle = [this.size / 10, 0x006400, 1];
@@ -188,9 +190,9 @@ export default class Player extends CollidesWithObjects {
         const nose = relativeAngle - direction;
         const eye1Angle = nose - 0.94 % 1;
         const eye2Angle = nose + 0.94 % 1;
+        const cheek1 = nose - 0.12 % 1;
+        const cheek2 = nose + 0.12 % 1;
         const faceFeatColor = 0xFFFFFF;
-        const arm1 = {type: LINE,  shape: new Line(shoulder1Point.x, shoulder1Point.y, hand1.x, hand1.y), color: this.color, lineWidth: this.gridUnit * 1.2};
-        const arm2 = {type: LINE,  shape: new Line(shoulder2Point.x, shoulder2Point.y, hand2.x, hand2.y), color: this.color, lineWidth: this.gridUnit * 1.2};
 
         // dp(shoulder1Point);
         // dp(hand2)
@@ -201,8 +203,8 @@ export default class Player extends CollidesWithObjects {
         const eye1Center = eyeCenterLine.getPoint(eye1Angle);
         const eye2Center = eyeCenterLine.getPoint(eye2Angle);
 
-        const nosePoint = equator.getPoint(nose);
-        dp(nosePoint);
+        const nosePoint = eyeBottomLine.getPoint(nose);
+        const mouthPoint = equator.getPoint(nose).lerp(nosePoint, 0.4);
         const eye1Rotation = RadToDeg(BetweenPoints(eyeTop, eye1Center)) + 90 % 360;
         const eye1Distance = eyeTop.distance(eye1Bottom);
 
@@ -235,10 +237,26 @@ export default class Player extends CollidesWithObjects {
         const torso = new Circle(centerCenter.x, centerCenter.y, this.gridUnit * 2);
         const skirtLength = centerCenter.clone().lerp(centerBottom, 0.7);
         const skirt = this.drawTrepazoid(this.pathHelper, new Circle( skirtLength.x, skirtLength.y, this.gridUnit * 2.55), 0x006400, 0.97);
-        skirt && obscuredShapes.push(skirt);
+        if (skirt) {
+            obscuredShapes.push(skirt);
+        }
         obscuredShapes.push({type: CIRCLE, color: 0x09d51, shape: torso});
-        obscuredShapes.push({type: CIRCLE, color: this.color, shape: new Circle(hand1.x, hand1.y, this.gridUnit * 0.8)});
-        obscuredShapes.push({type: CIRCLE, color: this.color, shape: new Circle(hand2.x, hand2.y, this.gridUnit * 0.8)});
+
+        let handPos1 = hand1;
+        let handPos2 = hand2;
+        if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) < this.size * 3.5) {
+            const {centerCenter: center} = that.head;
+            const circle = new Circle(center.x, center.y, this.size * 1.4);
+            const a2 = (direction + 0.1) % 1;
+            const b2 = (direction + 0.9) % 1;
+            handPos1 = point2Vec(circle.getPoint(a2));
+            handPos2 = point2Vec(circle.getPoint(b2));
+        }
+
+        obscuredShapes.push({type: CIRCLE, color: this.color, shape: new Circle(handPos1.x, handPos1.y, this.gridUnit * 0.8)});
+        obscuredShapes.push({type: CIRCLE, color: this.color, shape: new Circle(handPos2.x, handPos2.y, this.gridUnit * 0.8)});
+        const arm1 = {type: LINE,  shape: new Line(shoulder1Point.x, shoulder1Point.y, handPos1.x, handPos1.y), color: this.color, lineWidth: this.gridUnit * 1.2};
+        const arm2 = {type: LINE,  shape: new Line(shoulder2Point.x, shoulder2Point.y, handPos2.x, handPos2.y), color: this.color, lineWidth: this.gridUnit * 1.2};
 
         obscuredShapes.push(arm1);
         obscuredShapes.push(arm2);
@@ -269,8 +287,18 @@ export default class Player extends CollidesWithObjects {
 
         graphics.strokeCircleShape(this.head.shape);
         graphics.fillStyle(this.color, 1);
-        // graphics.fillStyle(0x9f1f19, 0.8);
+
+        graphics.fillStyle(0x9f1f19, 0.7);
+        dp(mouthPoint);
+        graphics.fillStyle(0x9f1f19, 0.2);
+
+        dp(eyeBottomLine.getPoint(cheek1));
+        dp(eyeBottomLine.getPoint(cheek2));
+        graphics.fillStyle(this.color, 1);
+
         dp(nosePoint);
+
+
 
         graphics.fillStyle(faceFeatColor, 1);
 
@@ -366,12 +394,12 @@ export default class Player extends CollidesWithObjects {
             return {type: -3, shape, color};
         }
     }
-    private getPointOnHead(callbackp1, point1) {
-        if (callbackp1) {
-            point1 = point1.distance(callbackp1[0]) < point1.distance(callbackp1[1]) ? callbackp1[0] : callbackp1[1];
-        }
-        return point1;
-    }
+    // private getPointOnHead(callbackp1, point1) {
+    //     if (callbackp1) {
+    //         point1 = point1.distance(callbackp1[0]) < point1.distance(callbackp1[1]) ? callbackp1[0] : callbackp1[1];
+    //     }
+    //     return point1;
+    // }
     private getTopHairShape(position, radius, hl1, hl2) {
         const { shape, pi2: all } = this.head;
         const direction = (this as ContainerLite).body.angle;
