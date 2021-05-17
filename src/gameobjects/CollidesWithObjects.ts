@@ -4,7 +4,7 @@ import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import {PerspectiveMixinType} from './PerspectiveMixin';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import ELLIPSE = Phaser.Geom.ELLIPSE;
-import {lineIntersect, point2Vec, unblockBut} from '../helpers';
+import {getArcShape, lineIntersect, point2Vec, unblockBut} from '../helpers';
 import Normalize = Phaser.Math.Angle.Normalize;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
@@ -14,6 +14,7 @@ import Circle = Phaser.Geom.Circle;
 import LINE = Phaser.Geom.LINE;
 import Path = Phaser.Curves.Path;
 import QuadraticBezier = Phaser.Curves.QuadraticBezier;
+import RadToDeg = Phaser.Math.RadToDeg;
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
@@ -24,6 +25,9 @@ export default class CollidesWithObjects extends ContainerLite {
         super(scene, x, y, size, size);
         scene.add.existing(this);
         scene.physics.world.enable(this);
+    }
+    public isBlockedDirection(direction: string) {
+        return this.blockedDirection[direction];
     }
     public pushCrate = (dir: string, crate: Crate) => console.error('not implemented!');
     protected resetBlockedDirections = (angle) => {
@@ -52,8 +56,8 @@ export default class CollidesWithObjects extends ContainerLite {
             this.pushCrate('right', crate);
         }
     }
-    protected getTrepazoid(circle1, circle2, color, percent, intersectPoint: Vector2 | null = null) {
-        const { graphics, point } = this as unknown as PerspectiveMixinType;
+    protected getTrepazoid(circle1, circle2, color, percent, intersectPoint: Vector2 | null = null, strokeColor = -1) {
+        const { graphics, point, dp } = this as unknown as PerspectiveMixinType;
         let cross;
         if (!intersectPoint) {
             const ext = new Line(circle1.x, circle1.y, circle2.x, circle2.y);
@@ -72,27 +76,26 @@ export default class CollidesWithObjects extends ContainerLite {
             const {p1, p2, p3, p4} = tp;
             const shape = new Path();
             shape.moveTo(p1);
-            shape.lineTo(p2);
-            shape.lineTo(p4);
-            shape.lineTo(p3);
             const mi = cross.clone().lerp(point, percent);
-            if (!intersectPoint) {
-                const curve = new QuadraticBezier(p1, mi, p2);
-                shape.add(curve);
-            }
+            const curve = new QuadraticBezier(p1, mi, p2);
+            shape.add(curve);
+            shape.lineTo(p2);
+            shape.lineTo(p3);
+            shape.lineTo(p4);
+
             shape.closePath();
 
-            return {type: -3, shape, color};
+            return {type: -3, shape, color, strokeColor, points: {p1, p2, p3, p4}};
         }
     }
     protected drawShapes(items) {
 
-        items.forEach(({type, shape, color, strokeColor, lineWidth = this.gridUnit / 4}) => {
+        items.forEach(({type, shape, color, strokeColor = -1, lineWidth = this.gridUnit / 4}) => {
             const {graphics} = this as unknown as PerspectiveMixinType;
             if (type === CIRCLE) {
                 graphics.fillStyle(color, 1);
                 graphics.fillCircleShape(shape);
-                if (strokeColor) {
+                if (strokeColor !== -1) {
                     graphics.lineStyle(lineWidth, strokeColor, 1);
                     graphics.strokeCircleShape(shape);
                 }
@@ -108,12 +111,21 @@ export default class CollidesWithObjects extends ContainerLite {
             } else if (type === -1) {
                 const {x, y, radius, startAngle, endAngle, anticlockwise} = shape;
                 graphics.beginPath();
+                graphics.lineStyle(lineWidth, strokeColor, 1);
+
                 graphics.fillStyle(color, 1);
                 graphics.arc(x, y, radius, startAngle, endAngle, anticlockwise);
                 graphics.fillPath();
+                if (strokeColor !== -1) {
+                    graphics.strokePath();
+                }
             } else {
                 graphics.fillStyle(color, 1);
+                graphics.lineStyle(this.gridUnit / 4, strokeColor, 1);
                 graphics.fillPoints(shape.getPoints());
+                if (strokeColor !== -1) {
+                    graphics.strokePoints(shape.getPoints());
+                }
             }
         });
         items?.shape?.destroy();
@@ -149,8 +161,8 @@ export default class CollidesWithObjects extends ContainerLite {
                 const d = point2Vec(circle1).distance(circle2);
                 const lineD = Phaser.Geom.Line.Extend(lineB, d, 0);
                 const lineE = Phaser.Geom.Line.Extend(lineC, d, 0);
-                p3 = lineD.getPointA();
-                p4 = lineE.getPointA();
+                p4 = lineD.getPointA();
+                p3 = lineE.getPointA();
             }
 
             const result = {p1, p2, p3, p4};

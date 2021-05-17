@@ -5,6 +5,15 @@ import Wall from './gameobjects/Wall';
 import Vector2 = Phaser.Math.Vector2;
 import ArcadeBodyCollision = Phaser.Types.Physics.Arcade.ArcadeBodyCollision;
 
+
+export interface ShapeCollectionItem {
+    type: number;
+    color: number;
+    strokeColor?: number | undefined;
+    lineWidth?: number | undefined;
+    shape: object;
+}
+
 export enum Direction {
     none,
     up,
@@ -156,3 +165,5 @@ export const unblockBut = (direction, items) => Object.entries(items).forEach((i
         items[item[0]] = false;
     }
 });
+
+export const getRandomInt = (max) => Math.floor(Math.random() * max);
