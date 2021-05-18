@@ -36,7 +36,6 @@ export default class Player extends CollidesWithObjects {
 
     private center: Circle;
     private shadow: Circle;
-    private lastDirection: number;
     private feetCircle: Circle;
     private shoe1: Shape;
     private shoe1Counter: number;
@@ -64,7 +63,6 @@ export default class Player extends CollidesWithObjects {
         this.shoe1Counter = 0;
         this.step = +1;
         this.now = 0;
-        this.lastDirection = Math.PI / 2;
 
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
         this.head.setDepth(2);
@@ -134,15 +132,8 @@ export default class Player extends CollidesWithObjects {
         this.shoe1.depth = 0;
         this.shoe2.depth = 0;
         graphics.setDepth(2);
-        const gameObject = (this as unknown as GameObjects.GameObject);
-        const body = (gameObject.body as Physics.Arcade.Body);
-        let bodyAngle;
-        if (body.speed > 0) {
-            bodyAngle = body.angle;
-            this.lastDirection = body.angle;
-        } else {
-            bodyAngle = this.lastDirection;
-        }
+
+        const bodyAngle = this.getBodyAngle();
         const direction = Normalize(bodyAngle) / all;
 
         const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
@@ -212,7 +203,7 @@ export default class Player extends CollidesWithObjects {
         if (skirt) {
             obscuredShapes.push(skirt);
         }
-        const topColor = 0x6d8cac   ;
+        const topColor = 0x6d8cac;
         obscuredShapes.push({type: CIRCLE, color: topColor, shape: torso, strokeColor: 0x000});
 
         let handPos1 = hand1;

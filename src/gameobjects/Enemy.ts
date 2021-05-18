@@ -13,7 +13,7 @@ import QuadraticBezier = Phaser.Curves.QuadraticBezier;
 import SphereClass from './Sphere';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
-import {getArcShape, point2Vec, pyt, setPosition, ShapeCollectionItem} from '../helpers';
+import {point2Vec, pyt, setPosition, ShapeCollectionItem} from '../helpers';
 import DegToRad = Phaser.Math.DegToRad;
 import GameObject = Phaser.GameObjects.GameObject;
 
@@ -83,7 +83,6 @@ export default class Enemy extends CollidesWithObjects {
         this.distanceToBoxCorner = crate.width;
         crate.enemy = me;
         this.handleCrateCollison(crate);
-        //   this.pushCrateImpl('down', crate);
       }
 
       public update() {
@@ -114,7 +113,8 @@ export default class Enemy extends CollidesWithObjects {
           graphics.fillCircleShape(feetCircle);
 
           that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
-          const direction = Normalize(that.body.angle) / all;
+          const bodyAngle = this.getBodyAngle();
+          const direction = Normalize(bodyAngle) / all;
 
           const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
 
@@ -178,7 +178,7 @@ export default class Enemy extends CollidesWithObjects {
             }
           if (!noseObscured) {
                 const shape = new QuadraticBezier(mouth1, nosePoint, mouth2);
-                unubscuredShapes.push({type: -2, shape, color: 0x00});
+                unubscuredShapes.push({type: -2, shape, color: 0x000});
             }
 
           if (this.head.isObscured(shoulder1Point)) {
@@ -208,10 +208,9 @@ export default class Enemy extends CollidesWithObjects {
           const { shape: head } = this.head;
           graphics.fillCircleShape(head);
           graphics.fillStyle(faceFeatColor, 1);
-          this.drawShapes(unubscuredShapes);
           const curve = new QuadraticBezier(browStart, browmiddle, browEnd);
-          curve.draw(graphics);
-
+          unubscuredShapes.push({type: -2, shape: curve, color: handColor});
+          this.drawShapes(unubscuredShapes);
           graphics.lineStyle(0, 0);
           }
     private getEyeShape(position, radius) {
