@@ -14,17 +14,19 @@ import Circle = Phaser.Geom.Circle;
 import LINE = Phaser.Geom.LINE;
 import Path = Phaser.Curves.Path;
 import QuadraticBezier = Phaser.Curves.QuadraticBezier;
-import RadToDeg = Phaser.Math.RadToDeg;
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
     protected pushedCrate: Crate | null;
     protected gridUnit: number;
     protected blockedDirection: Types.Physics.Arcade.ArcadeBodyCollision = { up: false, down: false, right: false, left: false, none: true };
+    protected lastDirection: number;
+
     constructor(scene, x: number, y: number, size: number, scale: number) {
         super(scene, x, y, size, size);
         scene.add.existing(this);
         scene.physics.world.enable(this);
+        this.lastDirection = Math.PI / 2;
     }
     public isBlockedDirection(direction: string) {
         return this.blockedDirection[direction];
@@ -129,6 +131,16 @@ export default class CollidesWithObjects extends ContainerLite {
             }
         });
         items?.shape?.destroy();
+    }
+    protected getBodyAngle() {
+        const gameObject = (this as unknown as GameObjects.GameObject);
+        const body = (gameObject.body as Physics.Arcade.Body);
+        if (body.speed > 0) {
+            this.lastDirection = body.angle;
+            return body.angle;
+        } else {
+            return this.lastDirection;
+        }
     }
     protected getExternalTangent(circle1, circle2, crossPoint) {
         if (circle1 && circle2 && crossPoint) {
