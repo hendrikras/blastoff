@@ -1,4 +1,4 @@
-import {Physics, Scene, Types} from 'phaser';
+import {GameObjects, Physics, Scene, Types} from 'phaser';
 import {
     collidesOnAxes,
     getArcShape,
@@ -16,7 +16,6 @@ import Circle = Phaser.Geom.Circle;
 import Vector2 = Phaser.Math.Vector2;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
-import RadToDeg = Phaser.Math.RadToDeg;
 import Line = Phaser.Geom.Line;
 
 import PerspectiveObject, {PerspectiveMixinType} from '../gameobjects/PerspectiveMixin';
@@ -37,7 +36,7 @@ export default class Player extends CollidesWithObjects {
 
     private center: Circle;
     private shadow: Circle;
-    private flower: Sprite;
+    private lastDirection: number;
     private feetCircle: Circle;
     private shoe1: Shape;
     private shoe1Counter: number;
@@ -65,6 +64,7 @@ export default class Player extends CollidesWithObjects {
         this.shoe1Counter = 0;
         this.step = +1;
         this.now = 0;
+        this.lastDirection = Math.PI / 2;
 
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
         this.head.setDepth(2);
@@ -77,7 +77,7 @@ export default class Player extends CollidesWithObjects {
         this.shoe2 = config.scene.add.rexRoundRectangle(x, y, size * 2, size, size / 2, shoeColor);
         this.shoe2.setScale(0.5);
         this.shoe2.setStrokeStyle(...shoeStyle);
-        this.center = new Circle(x, y, size * 1.2);
+        this.center = new Circle(x, y, size * 1.1);
         this.pathHelper = new Circle(x, y, size);
         this.feetCircle = new Circle(x, y, size);
 
@@ -110,6 +110,7 @@ export default class Player extends CollidesWithObjects {
     }
 
     public update() {
+
         this.hasInput = false;
         const that = this as ContainerLite;
         that.graphics.clear();
@@ -133,19 +134,25 @@ export default class Player extends CollidesWithObjects {
         this.shoe1.depth = 0;
         this.shoe2.depth = 0;
         graphics.setDepth(2);
-
-        const direction = Normalize(that.body.angle) / all;
+        const gameObject = (this as unknown as GameObjects.GameObject);
+        const body = (gameObject.body as Physics.Arcade.Body);
+        let bodyAngle;
+        if (body.speed > 0) {
+            bodyAngle = body.angle;
+            this.lastDirection = body.angle;
+        } else {
+            bodyAngle = this.lastDirection;
+        }
+        const direction = Normalize(bodyAngle) / all;
 
         const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
-        that.setChildRotation(this.shoe1, that.body.angle);
-        that.setChildRotation(this.shoe2, that.body.angle);
+        that.setChildRotation(this.shoe1, bodyAngle);
+        that.setChildRotation(this.shoe2, bodyAngle);
 
         const rightShoulder = (direction + 0.25) % 1;
         const leftShoulder =  (direction + 0.75) % 1;
 
         const shoulder1Point = equator.getPoint(relativeAngle - direction - 0.25 % 1);
-        const shoulder1PointR = equator.getPoint(relativeAngle - direction - 0.26 % 1);
-        const shoulder1PointL = equator.getPoint(relativeAngle - direction - 0.24 % 1);
         const shoulder2Point = equator.getPoint(relativeAngle - direction - 0.75 % 1);
         const hand1 = new Vector2(Circle.GetPoint(this.center, rightShoulder));
         const hand2 = new Vector2(Circle.GetPoint(this.center, leftShoulder));
@@ -163,6 +170,7 @@ export default class Player extends CollidesWithObjects {
         const faceFeatColor = 0xFFFFFF;
 
         const eye1Bottom = eyeBottomLine.getPoint(eye1AngleB);
+        const eye2Bottom = eyeBottomLine.getPoint(eye2AngleB);
         const eyeTop = eyeTopLine.getPoint(eye1Angle);
         const eye1Center = eyeCenterLine.getPoint(eye1Angle);
         const eye2Center = eyeCenterLine.getPoint(eye2Angle);
@@ -170,15 +178,16 @@ export default class Player extends CollidesWithObjects {
         const nosePoint = eyeBottomLine.getPoint(nose);
         const mouthPoint = equator.getPoint(nose).lerp(nosePoint, 0.4);
         const eye1Distance = eyeTop.distance(eye1Bottom);
+        const eye2Distance = eyeTop.distance(eye2Bottom);
 
         const line1 = 2.2 - (eye1Distance / this.gridUnit);
-        const line2 = 1.5 - (eye1Distance / this.gridUnit);
+        const line2 = 1.5 - (eye2Distance / this.gridUnit);
         const eyeWidth = this.gridUnit * 0.5;
         const irisSize = this.gridUnit * 0.25;
-        const eye1 = getArcShape(eye1Center, eyeWidth, line2, line1, that.body.angle);
-        const eye1Iris = getArcShape(eye1Center, irisSize, line2, line1, that.body.angle);
-        const eye2 = getArcShape(eye2Center, eyeWidth, line1, line2, that.body.angle);
-        const eye2Iris = getArcShape(eye2Center, irisSize , line1, line2, that.body.angle);
+        const eye1 = getArcShape(eye1Center, eyeWidth, line2, line1, bodyAngle);
+        const eye1Iris = getArcShape(eye1Center, irisSize, line2, line1, bodyAngle);
+        const eye2 = getArcShape(eye2Center, eyeWidth, line1, line2, bodyAngle);
+        const eye2Iris = getArcShape(eye2Center, irisSize , line1, line2, bodyAngle);
 
         const irisColor = 0x357388;
         this.walk(direction);
@@ -246,8 +255,8 @@ export default class Player extends CollidesWithObjects {
         if (hair) {
             unubscuredShapes.push(hair);
         }
-        const topHair1 = getArcShape(point, this.size, 1, 2.7, that.body.angle);
-        const topHair2 = getArcShape(point, this.size, 1.6, 1, that.body.angle);
+        const topHair1 = getArcShape(point, this.size, 1, 2.7, bodyAngle);
+        const topHair2 = getArcShape(point, this.size, 1.6, 1, bodyAngle);
         unubscuredShapes.push({type: -1, shape: topHair1, color: topBlonde, strokeColor: 0X0866251});
         unubscuredShapes.push({type: -1, shape: topHair2, color: topBlonde, strokeColor: 0X0866251});
         unubscuredShapes.push({type: -1, shape: lok1, color: topBlonde});
@@ -281,7 +290,8 @@ export default class Player extends CollidesWithObjects {
     }
     private walk(direction) {
         const { graphics, point } = this as unknown as PerspectiveMixinType;
-        const that = this as ContainerLite;
+        const container = this as ContainerLite;
+
         // re-enable moving in a certain direction if passed a blockade
         if (this.pushedCrate) {
             this.resetBlockedDirections(BetweenPoints(this.pushedCrate, point));
@@ -327,12 +337,14 @@ export default class Player extends CollidesWithObjects {
             const ppb = this.feetCircle.getPoint(b2);
             const pa = p1.clone().lerp(pp, this.now);
             const pb = p2.clone().lerp(ppb, Math.abs(this.now - 1));
-            that.setChildPosition(this.shoe1, pa.x, pa.y);
-            that.setChildPosition(this.shoe2, pb.x, pb.y);
+            container.setChildPosition(this.shoe1, pa.x, pa.y);
+            container.setChildPosition(this.shoe2, pb.x, pb.y);
           }
         // We normalize the velocity so that the player is always moving at the same speed, regardless of direction.
         const normalizedVelocity = velocity.normalize();
-        that.body.setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
+        const gameObject = (this as unknown as GameObjects.GameObject);
+        (gameObject.body as Physics.Arcade.Body)
+            .setVelocity(normalizedVelocity.x * this.speed, normalizedVelocity.y * this.speed);
     }
     private pushCrateImpl(direction: string, crate: Crate) {
         const up = direction === 'up';
