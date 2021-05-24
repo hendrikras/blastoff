@@ -30,7 +30,6 @@ const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
 
 export class GameScene extends Phaser.Scene {
   private gridUnit: number = 0;
-  private keySpace: Phaser.Input.Keyboard.Key;
   private player: ContainerLite;
   private enemy: ContainerLite;
   private prison: Physics.Arcade.Sprite;
@@ -91,14 +90,13 @@ export class GameScene extends Phaser.Scene {
     this.crates = this.physics.add.group(crateConfig);
 
     this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
-    this.prison.setRandomPosition();
     const quarterCrate = this.gridUnit * 2.6;
 
     this.prison.setScale(this.gridUnit / 14.1 );
 
     this.prison.depth = 2;
 
-    // this.crates.add(this.prison);
+    this.crates.add(this.prison);
     const CubeType = PerspectiveObject(Wall);
 
     // const wall = new Wall(this, 0 , 0, 'prison', new Vector2(2,4));
@@ -128,7 +126,6 @@ export class GameScene extends Phaser.Scene {
     this.rocket.setScale( this.gridUnit / 15);
     this.rocket.setDepth(1);
 
-    this.crates.add(this.prison);
     this.crates.setDepth(3);
     this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, quarterCrate, this.gridUnit / 4);
     this.player.scale = 3;
@@ -138,18 +135,27 @@ export class GameScene extends Phaser.Scene {
     // @ts-ignore
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
     // @ts-ignore
+    // const cratesCollider = this.physics.add.collider(this.enemy, this.crates);
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
     // @ts-ignore
     this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
     this.fallingCrates = [];
     // @ts-ignore
-
+    const enemy = this.enemy;
+    const player = this.player;
     function placeCrate(crate, crates) {
+      const {width: w, height: h} = crate;
+      const p1 = new Vector2(w, 0);
+      const p2 = new Vector2(0, h);
+      // const rad = p1.distance(p2);
+      // console.log(w, p1.distance(p2), w * 1.5);
       crate.setRandomPosition(startX, startY, width, height);
       crates.children.iterate((item) => {
         if (item !== crate) {
           const pos = point2Vec(item as Vector2);
-          if (pos.distance(crate) < crate.width) {
+          const cratePos = point2Vec(crate);
+          const rad = crate.width * 1.5;
+          if (pos.distance(crate) <= rad || cratePos.distance(enemy) <= rad || cratePos.distance(player) <= rad) {
             placeCrate(crate, crates);
           }
         }
@@ -157,14 +163,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.crates.children.iterate((crate, idx) => {
-      console.log(crate.name);
-      if (crate.name !== 'prison') {
-        placeCrate(crate, this.crates);
-      } else {
-        crate.name = `crate${idx}`;
-      }
+      placeCrate(crate, this.crates);
       this.fallingCrates.push(crate as Crate);
     });
+
     this.boundedCrates = [];
     this.updatePerspectiveDrawing();
     this.physics.world.on('worldbounds', (body /*, up, down, left, right*/) => {
@@ -176,16 +178,16 @@ export class GameScene extends Phaser.Scene {
     // set motion on the stars
 
     if (!this.rocket.visible) {
+      // this.enemy.
       this.dropEverything();
     }
     this.backgoundInc === 0
         ? this.background.tilePositionX -= 1
         : this.background.tilePositionY -= this.backgoundInc;
 
-    if (this.player.isMoving() ) {
-      const pos = new Phaser.Math.Vector2(this.player.x, this.player.y);
-      this.enemy.exterminate(pos);
-    }
+    const pos = new Vector2(this.player.x, this.player.y);
+    this.enemy.exterminate(pos, this.crates);
+
     this.player.update();
     this.enemy.update();
 
