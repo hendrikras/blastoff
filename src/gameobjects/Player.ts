@@ -16,14 +16,13 @@ import Circle = Phaser.Geom.Circle;
 import Vector2 = Phaser.Math.Vector2;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
-import Line = Phaser.Geom.Line;
 
 import PerspectiveObject, {PerspectiveMixinType} from '../gameobjects/PerspectiveMixin';
 import SphereClass from './Sphere';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
 import Shape = Phaser.GameObjects.Shape;
-import Sprite = Phaser.GameObjects.Sprite;
+import GameObject = Phaser.GameObjects.GameObject;
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -43,7 +42,6 @@ export default class Player extends CollidesWithObjects {
     private color: number;
     private size: number;
     private pathHelper: Circle;
-    private head: SphereClass;
     private step: number;
     private now: number;
 
@@ -51,6 +49,9 @@ export default class Player extends CollidesWithObjects {
 
     constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, scale) {
         super(config.scene, config.x, config.y, size, size);
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        body.setCollideWorldBounds(true);
+
         this.scene = config.scene;
         const that = this as ContainerLite;
         const {x, y} = config;
@@ -59,11 +60,10 @@ export default class Player extends CollidesWithObjects {
         this.size = size;
         this.shadow = config.scene.add.circle(x, y, size, shadowColor, 0.4);
         const quarter = size * 1.8;
-        const Sphere = PerspectiveObject(SphereClass);
         this.shoe1Counter = 0;
         this.step = +1;
         this.now = 0;
-
+        const Sphere = PerspectiveObject(SphereClass);
         this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
         this.head.setDepth(2);
 
@@ -78,14 +78,11 @@ export default class Player extends CollidesWithObjects {
         this.center = new Circle(x, y, size * 1.1);
         this.pathHelper = new Circle(x, y, size);
         this.feetCircle = new Circle(x, y, size);
-
         that.add(this.shadow);
         that.add(this.shoe1);
         that.add(this.shoe2);
         this.shoe1.depth = 0;
         this.shoe2.depth = 0;
-
-        that.body.setCollideWorldBounds(true);
 
         this.crates = crates.children.getArray() as Crate[];
         this.speed = gridUnit * this.pace;
@@ -117,7 +114,7 @@ export default class Player extends CollidesWithObjects {
         const unubscuredShapes: ShapeCollectionItem[] = [];
 
         that.predraw();
-        const { vertices: v, x, y, dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
+        const { x, y, dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
         setPosition(this.pathHelper, that);
         setPosition(this.head, that);
         setPosition(this.center, centerCenter);
@@ -172,7 +169,7 @@ export default class Player extends CollidesWithObjects {
         const eye2Distance = eyeTop.distance(eye2Bottom);
 
         const line1 = 2.2 - (eye1Distance / this.gridUnit);
-        const line2 = 1.5 - (eye2Distance / this.gridUnit);
+        const line2 = 1.8 - (eye2Distance / this.gridUnit);
         const eyeWidth = this.gridUnit * 0.5;
         const irisSize = this.gridUnit * 0.25;
         const eye1 = getArcShape(eye1Center, eyeWidth, line2, line1, bodyAngle);
@@ -183,17 +180,15 @@ export default class Player extends CollidesWithObjects {
         const irisColor = 0x357388;
         this.walk(direction);
         const lineWidth = this.gridUnit / 10;
-        if (!isObscured(eye1Center)) {
-            unubscuredShapes.push({type: -1, shape: eye1, color: 0xFFFFFF, strokeColor: 0x000, lineWidth});
-            unubscuredShapes.push({type: -1, shape: eye1Iris, color: irisColor, strokeColor: 0x000, lineWidth});
-        }
-        if (!isObscured(eye2Center)) {
-            unubscuredShapes.push({type: -1, shape: eye2, color: 0xFFFFFF, strokeColor: 0x000, lineWidth});
-            unubscuredShapes.push({type: -1, shape: eye2Iris, color: irisColor, strokeColor: 0x000, lineWidth});
-        }
+        unubscuredShapes.push({type: -1, shape: eye1, color: 0xFFFFFF, strokeColor: 0x000, lineWidth});
+        unubscuredShapes.push({type: -1, shape: eye1Iris, color: irisColor, strokeColor: 0x000, lineWidth});
+        unubscuredShapes.push({type: -1, shape: eye2, color: 0xFFFFFF, strokeColor: 0x000, lineWidth});
+        unubscuredShapes.push({type: -1, shape: eye2Iris, color: irisColor, strokeColor: 0x000, lineWidth});
+        unubscuredShapes.push({type: CIRCLE, strokeColor: 0x000, shape: this.head.shape});
+        unubscuredShapes.push({type: -1, color: this.color, strokeColor: 0x000, lineWidth: this.gridUnit / 10, shape: this.getDomeShape(nosePoint, this.gridUnit * 0.35)});
 
-        const leg1 = {type: LINE,  shape: new Line(this.shoe1.x, this.shoe1.y, point.x, point.y), color: this.color, lineWidth: this.gridUnit * 1.2};
-        const leg2 = {type: LINE,  shape: new Line(this.shoe2.x, this.shoe2.y, point.x, point.y), color: this.color, lineWidth: this.gridUnit * 1.2};
+        const leg1 = {type: LINE,  shape: this.getLine(this.shoe1, point), color: this.color, lineWidth: this.gridUnit * 1.2};
+        const leg2 = {type: LINE,  shape: this.getLine(this.shoe2, point), color: this.color, lineWidth: this.gridUnit * 1.2};
         obscuredShapes.push(leg1);
         obscuredShapes.push(leg2);
         const torso = new Circle(centerCenter.x, centerCenter.y, this.gridUnit * 2);
@@ -219,10 +214,12 @@ export default class Player extends CollidesWithObjects {
 
         obscuredShapes.push({type: CIRCLE, color: this.color, shape: new Circle(handPos1.x, handPos1.y, this.gridUnit * 0.8), strokeColor: 0x000});
         obscuredShapes.push({type: CIRCLE, color: this.color, shape: new Circle(handPos2.x, handPos2.y, this.gridUnit * 0.8), strokeColor: 0x000});
-        const arm1 = {type: LINE,  shape: new Line(shoulder1Point.x, shoulder1Point.y, handPos1.x, handPos1.y), color: topColor, lineWidth: this.gridUnit * 1.2};
-        const arm1Outline = {type: LINE,  shape: new Line(shoulder1Point.x, shoulder1Point.y, handPos1.x, handPos1.y), color: 0x000, lineWidth: this.gridUnit * 1.8};
-        const arm2 = {type: LINE,  shape: new Line(shoulder2Point.x, shoulder2Point.y, handPos2.x, handPos2.y), color: topColor, lineWidth: this.gridUnit * 1.2};
-        const arm2Outline = {type: LINE,  shape: new Line(shoulder2Point.x, shoulder2Point.y, handPos2.x, handPos2.y), color: 0x000, lineWidth: this.gridUnit * 1.8};
+        const arm1Line = this.getLine(shoulder1Point, handPos1);
+        const arm2Line = this.getLine(shoulder2Point, handPos2);
+        const arm1 = {type: LINE,  shape: arm1Line, color: topColor, lineWidth: this.gridUnit * 1.2};
+        const arm1Outline = {type: LINE,  shape: arm1Line, color: 0x000, lineWidth: this.gridUnit * 1.8};
+        const arm2 = {type: LINE,  shape: arm2Line, color: topColor, lineWidth: this.gridUnit * 1.2};
+        const arm2Outline = {type: LINE,  shape: arm2Line, color: 0x000, lineWidth: this.gridUnit * 1.8};
 
         obscuredShapes.push({type: CIRCLE, color: topColor, strokeColor: 0x000, shape: new Circle(shoulder1Point.x, shoulder1Point.y, this.gridUnit * 0.65)});
         obscuredShapes.push({type: CIRCLE, color: topColor, strokeColor: 0x000, shape: new Circle(shoulder2Point.x, shoulder2Point.y, this.gridUnit * 0.65)});
@@ -238,7 +235,8 @@ export default class Player extends CollidesWithObjects {
         graphics.fillStyle(this.color, 1);
         graphics.fillCircleShape(this.head.shape);
 
-        const lok1 =  { x, y, radius: this.gridUnit , startAngle: 0, endAngle: all };
+        // const lok1 =  getArcShape(point, this.gridUnit, 1.8, 1.5, bodyAngle + Math.PI); //{ x, y, radius: this.gridUnit , startAngle: bodyAngle - 0.1, endAngle: bodyAngle };
+        const lok1 =  { x, y, radius: this.gridUnit , startAngle: bodyAngle - 0.1, endAngle: bodyAngle };
         const topBlonde = 0xd9b380;
         const bottomBlonde = 0xdc89f73;
         const bunp = equator.getPoint(relativeAngle - direction - 0.5 % 1);
@@ -246,14 +244,14 @@ export default class Player extends CollidesWithObjects {
         if (hair) {
             unubscuredShapes.push(hair);
         }
+        // const shape = getArcCurve(lok1);
         const topHair1 = getArcShape(point, this.size, 1, 2.7, bodyAngle);
         const topHair2 = getArcShape(point, this.size, 1.6, 1, bodyAngle);
         unubscuredShapes.push({type: -1, shape: topHair1, color: topBlonde, strokeColor: 0X0866251});
         unubscuredShapes.push({type: -1, shape: topHair2, color: topBlonde, strokeColor: 0X0866251});
-        unubscuredShapes.push({type: -1, shape: lok1, color: topBlonde});
+        unubscuredShapes.push({type: CIRCLE, shape: lok1, color: topBlonde});
         graphics.lineStyle(this.gridUnit / 4, 0x000);
 
-        graphics.strokeCircleShape(this.head.shape);
         graphics.fillStyle(this.color, 1);
 
         graphics.fillStyle(0x9f1f19, 0.7);
@@ -262,13 +260,12 @@ export default class Player extends CollidesWithObjects {
 
         dp(eyeBottomLine.getPoint(cheek1));
         dp(eyeBottomLine.getPoint(cheek2));
-        graphics.fillStyle(this.color, 1);
 
-        dp(nosePoint);
         graphics.fillStyle(faceFeatColor, 1);
 
         graphics.fillStyle(0xFFFFFF, 1);
         this.drawShapes(unubscuredShapes);
+
         graphics.lineStyle(0, 0);
     }
     public crateCollider = (me: Player, crate: Crate) => {
@@ -285,7 +282,7 @@ export default class Player extends CollidesWithObjects {
 
         // re-enable moving in a certain direction if passed a blockade
         if (this.pushedCrate) {
-            this.resetBlockedDirections(BetweenPoints(this.pushedCrate, point));
+            this.resetBlockedDirections(this.pushedCrate);
         }
 
         // Every frame, we create a new velocity for the sprite based on what keys the player is holding down.

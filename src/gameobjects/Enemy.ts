@@ -1,21 +1,23 @@
-import { Physics, GameObjects } from 'phaser';
+import {Physics} from 'phaser';
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import PerspectiveObject, {PerspectiveMixinType} from './PerspectiveMixin';
+import SphereClass from './Sphere';
+import {Direction, point2Vec, setPosition, ShapeCollectionItem} from '../helpers';
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
 import Vector2 = Phaser.Math.Vector2;
 import Circle = Phaser.Geom.Circle;
-import RadToDeg = Phaser.Math.RadToDeg;
 import Line = Phaser.Geom.Line;
 import QuadraticBezier = Phaser.Curves.QuadraticBezier;
-import SphereClass from './Sphere';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
-import {point2Vec, pyt, setPosition, ShapeCollectionItem} from '../helpers';
-import DegToRad = Phaser.Math.DegToRad;
 import GameObject = Phaser.GameObjects.GameObject;
+import Rectangle = Phaser.Geom.Rectangle;
+import LineToRectangle = Phaser.Geom.Intersects.LineToRectangle;
+import PathFollower = Phaser.GameObjects.PathFollower;
+import RTree = Phaser.Structs.RTree;
 
 export default class Enemy extends CollidesWithObjects {
     private readonly speed: number = 0;
@@ -27,17 +29,30 @@ export default class Enemy extends CollidesWithObjects {
     private color: number;
     private size: number;
     private pathHelper: Circle;
-    private head: SphereClass;
+    private collisionPoint: Vector2;
+    private collisionRect: Rectangle;
+    private pathLine: Line;
+    private follower: PathFollower;
+    private acceleration: Vector2;
 
     constructor(config, gridUnit: number, size: number, scale: number) {
         super(config.scene, config.x, config.y, size, scale);
         const {x, y} = config;
         const that = this as ContainerLite;
-        that.body.setCollideWorldBounds(true);
+        // that.body.setCollideWorldBounds(true);
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        body.setCollideWorldBounds(true);
+        // body.setEnable(true);
+
+        // body.setBounce(10, 10);
         this.color = 0X0B6382;
         const shadowColor = 0X031920;
         this.size = size;
+
         this.shadow = config.scene.add.circle(x, y, size / 3.5, shadowColor, 0.4);
+        // const path1 = this.getLine(that.point, )
+        const path1 = new Phaser.Curves.Path(x, y).circleTo(100);
+
         that.add(this.shadow);
         this.center = new Circle(x, y, size * 1.2);
         this.pathHelper = new Circle(x, y, size);
@@ -49,6 +64,7 @@ export default class Enemy extends CollidesWithObjects {
         that.setScale(scale, scale);
         this.speed = gridUnit * 20;
         this.gridUnit = gridUnit / 10;
+        this.acceleration = new Vector2(0, 0);
         this.pushCrate = this.pushCrateImpl;
     }
     public get chasePlayer() {
@@ -60,19 +76,70 @@ export default class Enemy extends CollidesWithObjects {
     public setBlockedDirection(direction: string) {
       this.blockedDirection[direction] = true;
     }
-    public exterminate(player: Vector2) {
-        const {point} = this as unknown as PerspectiveMixinType;
+    public exterminate(player: Vector2, crates) {
+        const {point, graphics, dp} = this as unknown as PerspectiveMixinType;
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        let target;
+        const line = this.getLine(point, player);
+        // const { add } = this as unknown as Sce;
+        const tree = new RTree();
 
-        const enemyVelocity = new Vector2(player.x - point.x , player.y  - point.y).normalize();
-        const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
-        const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
+        crates.children.iterate((crate: Crate) => {
+            const {left, right, top, bottom} = crate.getBounds();
 
-        if (this.pushedCrate) {
-            this.resetBlockedDirections(BetweenPoints(this.pushedCrate, point));
+            //  Insert our entry into the RTree:
+            (tree as any).insert({left, right, top, bottom, crate});
+        });
+
+        let path;
+        crates.children.iterate((crate: Crate) => {
+            const {body: crateBody} = crate;
+
+            const rect = new Rectangle(crate.x - crateBody.width / 2, crate.y - crateBody.height / 2, crateBody.width, crateBody.height);
+            const prectSize = crateBody.width * 2;
+            const pathRect = new Rectangle(crate.x - prectSize / 2, crate.y - prectSize / 2, prectSize, prectSize);
+            const bbox = {
+                minX: crate.x - prectSize / 2,
+                minY: crate.y - prectSize / 2,
+                maxX: crate.x + prectSize,
+                maxY: crate.y + prectSize,
+            };
+
+            if (LineToRectangle(line, rect)) {
+
+                const result = (tree as any).search(bbox).filter(({crate: res}) => res !== crate);
+                const useCrate =  crate ;// result.length > 0 ? result[0].crate : crate;
+                this.collisionRect = useCrate.getBounds();
+                // pathRect.setPosition(useCrate.x, useCrate.y);
+                const useRect = new Rectangle(useCrate.x - prectSize / 2, useCrate.y - prectSize / 2, prectSize, prectSize);
+
+                // const path = pathRect.getPoints(4);
+                path = this.getSide(crate, pathRect);
+            } else {
+                // this.seek(player);
+            }
+        });
+        const predict = body.velocity.clone();
+        predict.normalize();
+        predict.scale(this.gridUnit);
+        predict.add(point);
+        if (!path) {
+            path = this.getLine(point, player);
         }
+        this.follow(path, predict);
 
-        body.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
+        body.velocity.add(this.acceleration);
+        body.velocity.limit(this.speed);
+        //
+        // const enemyVelocity = new Vector2(target.x - point.x , target.y  - point.y).normalize();
+        // const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
+        // const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
+        //
+        // if (this.pushedCrate) {
+        //     this.resetBlockedDirections(this.pushedCrate);
+        // }
+        // // body.setVelocity(this.seek(target));
+        // body.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
         if (this.pushedCrate && this.playersCrate !== crate) {
@@ -80,27 +147,25 @@ export default class Enemy extends CollidesWithObjects {
         }
         this.pushedCrate = crate;
         this.blockedDirection.none = false;
-        this.distanceToBoxCorner = crate.width;
+        // this.distanceToBoxCorner = crate.width;
         crate.enemy = me;
         this.handleCrateCollison(crate);
       }
 
       public update() {
           const that = (this as ContainerLite);
-          that.graphics.setDepth(2);
-
+          that.predraw();
+          const { dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
           if (this.pushedCrate) {
-            if (this.pushedCrate.x - that.x > this.pushedCrate.height || this.pushedCrate.y - that.y > this.pushedCrate.height) {
-                this.pushedCrate.enemy = null;
-            }
-        }
-          that.graphics.clear();
-          that.graphics.lineStyle();
+              if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) > this.pushedCrate.body.width) {
+                  this.pushedCrate.enemy = null;
+              }
+          }
+          graphics.setDepth(2);
+          graphics.clear();
           const obscuredShapes: ShapeCollectionItem[] = [];
           const unubscuredShapes: ShapeCollectionItem[] = [];
 
-          that.predraw();
-          const { dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
           setPosition(this.pathHelper, that);
           setPosition(this.head, that);
           setPosition(this.center, centerCenter);
@@ -196,12 +261,10 @@ export default class Enemy extends CollidesWithObjects {
                 unubscuredShapes.push(hand2Shape);
             }
 
-          graphics.fillStyle(faceFeatColor);
-
           const wh = this.gridUnit / 1.7;
 
-          unubscuredShapes.push({type: -1, shape: this.getEyeShape(eye1, wh), color: faceFeatColor, strokeColor: handColor});
-          unubscuredShapes.push({type: -1, shape: this.getEyeShape(eye2, wh), color: faceFeatColor, strokeColor: handColor});
+          unubscuredShapes.push({type: -1, shape: this.getDomeShape(eye1, wh), color: faceFeatColor, strokeColor: handColor});
+          unubscuredShapes.push({type: -1, shape: this.getDomeShape(eye2, wh), color: faceFeatColor, strokeColor: handColor});
 
           this.drawShapes(obscuredShapes);
           graphics.fillStyle(this.color, 1);
@@ -213,34 +276,84 @@ export default class Enemy extends CollidesWithObjects {
           this.drawShapes(unubscuredShapes);
           graphics.lineStyle(0, 0);
           }
-    private getEyeShape(position, radius) {
-        const { shape, pi2: all } = this.head;
-        const between = Normalize(BetweenPoints(position, shape));
-        const midRad = between / all;
-        const dist = (position.distance(shape) / (shape.radius) - 0.5) * 2;
-        const midPoint = point2Vec(shape.getPoint(midRad)).lerp(shape, dist);
-        const l = new Line(midPoint.x, midPoint.y, shape.x, shape.y);
-        const distance = shape.radius * (1 - dist);
-        const size = pyt(distance, shape.radius);
-
-        const ang = RadToDeg(between) + 90 % 360;
-        Line.SetToAngle(l, midPoint.x, midPoint.y, DegToRad(ang), size);
-
-        const circAng = (between / all + 0.25) % 1;
-        const pointB = l.getPointB();
-        const startAngle = Normalize(BetweenPoints(shape, pointB));
-        const circAng2 = (circAng + 0.5) % 1;
-        const reflectPoint1 = shape.getPoint(circAng);
-        const reflectPoint2 = shape.getPoint(circAng2);
-        const reflectingLine = new Line(reflectPoint1.x, reflectPoint1.y, reflectPoint2.x, reflectPoint2.y);
-        const toCenter = new Line(pointB.x, pointB.y, shape.x, shape.y);
-        const endAngle = Normalize(Line.ReflectAngle( toCenter, reflectingLine));
-        return { x: position.x, y: position.y, radius, startAngle, endAngle, anticlockwise: false  };
-    }
 
     private pushCrateImpl(direction: string, crate: Crate) {
-        const that = (this as unknown as GameObjects.Container);
         this.setBlockedDirection(direction);
-        (that.body as Physics.Arcade.Body).setVelocity(0);
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        const dir = Direction[direction];
+        switch (dir) {
+            case Direction.up : case Direction.down:
+                body.setVelocityY(0);
+                break;
+            case Direction.left: case Direction.right:
+                body.setVelocityX(0);
+                break;
+            default:
+                body.setVelocity(0);
+        }
+    }
+    private getSide(crate, pathRect) {
+        const side = this.facingSide(crate);
+        switch (side) {
+        case Direction.up:
+            return pathRect.getLineC();
+        case Direction.right:
+            return pathRect.getLineD();
+        case Direction.down:
+            return pathRect.getLineA();
+        default:
+            return pathRect.getLineB();
+        }
+    }
+    private getNormalPoint(p: Vector2, a: Vector2, b: Vector2) {
+        // PVector that points from a to p
+        const ap = a .clone();
+        ap.subtract(p);
+        // PVector that points from a to b
+        const ab = a.clone();
+        ab.subtract(b);
+        // Using the dot product for scalar projection
+        ab.normalize();
+        ab.scale(ap.dot(ab));
+        // Finding the normal point along the line segment
+        const res = a.clone();
+        res.add(ab);
+        return res;
+    }
+    private follow(p: Line, predictLoc: Vector2) {
+
+        // Find the normal point along the path.
+        const a = p.getPointA();
+        const b = p.getPointB();
+        this.pathLine = p;
+        const normalPoint = this.getNormalPoint(predictLoc, a, b);
+
+        // Move a little further along the path and set a target.
+        const dir = b.subtract(a);
+        dir.normalize();
+        dir.scale(this.gridUnit * 25);
+        const target = normalPoint.add(dir);
+        // If we are off the path, seek that target in order to stay on the path.
+        const distance = normalPoint.distance(predictLoc);
+        if (distance > this.gridUnit * 10) {
+            this.collisionPoint = target;
+            this.seek(target);
+        }
+    }
+    private seek(target: Vector2) {
+        const { point } = this as unknown as PerspectiveMixinType;
+        const desired = target.clone();
+        desired.subtract(point);
+        desired.normalize();
+        const maxSpeed = new Vector2(this.speed, this.speed);
+        // // Calculating the desired velocity to target at max speed
+        desired.multiply(maxSpeed);
+        // Reynolds’s formula for steering force
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        const steer = desired.clone();
+        steer.subtract(body.velocity);
+        steer.limit(0.3);
+
+        this.acceleration.add(steer);
     }
 }

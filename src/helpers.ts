@@ -4,22 +4,28 @@ import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 import Wall from './gameobjects/Wall';
 import Vector2 = Phaser.Math.Vector2;
 import ArcadeBodyCollision = Phaser.Types.Physics.Arcade.ArcadeBodyCollision;
-
+import Path = Phaser.Curves.Path;
+import RadToDeg = Phaser.Math.RadToDeg;
+import FACING_UP = Phaser.Physics.Arcade.FACING_UP;
+import FACING_DOWN = Phaser.Physics.Arcade.FACING_DOWN;
+import FACING_LEFT = Phaser.Physics.Arcade.FACING_LEFT;
+import FACING_RIGHT = Phaser.Physics.Arcade.FACING_RIGHT;
+import FACING_NONE = Phaser.Physics.Arcade.FACING_NONE;
 
 export interface ShapeCollectionItem {
     type: number;
-    color: number;
+    color?: number | undefined;
     strokeColor?: number | undefined;
     lineWidth?: number | undefined;
     shape: object;
 }
 
 export enum Direction {
-    none,
-    up,
-    down,
-    left,
-    right,
+    none = FACING_NONE,
+    up = FACING_UP,
+    down = FACING_DOWN,
+    left = FACING_LEFT,
+    right = FACING_RIGHT,
 }
 export const getGameWidth = (scene: Phaser.Scene) => {
     return scene.game.scale.width;
@@ -128,7 +134,7 @@ export function setPosition(target: HasPos, position: HasPos) {
     target.y = position.y;
 }
 
-export const CreateBubbleShape = (scene) => {
+export const CreateShape = (scene) => {
     return scene.add.rexCustomShapes({
         type: 'SpeechBubble',
         create: { lines: 1 },
@@ -144,21 +150,29 @@ export const CreateBubbleShape = (scene) => {
                 .lineStyle(2, strokeColor, 1)
                 .fillStyle(fillColor, 1)
                 // top line, right arc
-                .startAt(left + radius, top).lineTo(right - radius, top)
-                .arc(right - radius, top + radius, radius, 270, 360)
+                .startAt(left + radius, top)
+                // .arc(right - radius, top + radius, radius, 270, 360)
                 // right line, bottom arc
-                .lineTo(right, boxBottom - radius)
-                .arc(right - radius, boxBottom - radius, radius, 0, 90)
-                .lineTo(left + radius, boxBottom)
-                .arc(left + radius, boxBottom - radius, radius, 90, 180)
+                // .lineTo(right, boxBottom - radius)
+                // .arc(right - radius, boxBottom - radius, radius, 0, 90)
+                // .lineTo(left + radius, boxBottom)
+                .arc(left + radius, boxBottom - radius, radius, 60, 180)
                 // // left line, top arc
-                .lineTo(left, top + radius)
-                .arc(left + radius, top + radius, radius, 180, 270)
+                // .lineTo(left, top + radius)
+                .arc(left + radius, top + radius, radius, 180, 300)
+                // .lineTo(left, top + radius)
+
                 .close();
         },
     });
 };
-
+export function getArcCurve({x, y, radius, startAngle, endAngle}) {
+    const path = new Path();
+    path.moveTo(x, y);
+    path.ellipseTo(radius, radius, RadToDeg(startAngle), RadToDeg(endAngle));
+    path.closePath();
+    return path;
+}
 export const getArcShape = (position, radius, hl1, hl2, direction) => ({ x: position.x, y: position.y, radius, startAngle: direction + hl1 % Math.PI, endAngle: direction - hl2 % Math.PI });
 export const unblockBut = (direction, items) => Object.entries(items).forEach((item) => {
     if (item[0] !== direction) {

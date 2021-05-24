@@ -3,6 +3,7 @@ import Enemy from './Enemy';
 import {PerspectiveMixinType} from './PerspectiveMixin';
 import {Direction} from '../helpers';
 import Vector2 = Phaser.Math.Vector2;
+import GameObject = Phaser.GameObjects.GameObject;
 
 class Crate extends Physics.Arcade.Sprite {
     get enemy(): Enemy | null {
@@ -28,8 +29,11 @@ class Crate extends Physics.Arcade.Sprite {
        this.name = name;
        this.setFrame(PMath.Between(0, 4));
        this.setCollideWorldBounds();
-       // @ts-ignore
-       this.body.onWorldBounds = true;
+       const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+       body.onWorldBounds = true;
+       this.setPushable(false);
+       // body.setEnable(true);
+       // body.setBounce(3,3);
 
         // @ts-ignore
        this.drawPoints = this.drawFace;
