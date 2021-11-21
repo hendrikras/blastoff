@@ -1,4 +1,4 @@
-import {Physics} from 'phaser';
+import {Curves, Physics} from 'phaser';
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
@@ -16,8 +16,15 @@ import LINE = Phaser.Geom.LINE;
 import GameObject = Phaser.GameObjects.GameObject;
 import Rectangle = Phaser.Geom.Rectangle;
 import LineToRectangle = Phaser.Geom.Intersects.LineToRectangle;
+import GetLineToRectangle = Phaser.Geom.Intersects.GetLineToRectangle;
+import GetLineToCircle = Phaser.Geom.Intersects.GetLineToCircle;
+import Between = Phaser.Math.Distance.Between;
 import PathFollower = Phaser.GameObjects.PathFollower;
 import RTree = Phaser.Structs.RTree;
+import Path = Phaser.Curves.Path;
+import PointToLine = Phaser.Geom.Intersects.PointToLine;
+
+import scenes from '../scenes';
 
 export default class Enemy extends CollidesWithObjects {
     private readonly speed: number = 0;
@@ -32,8 +39,10 @@ export default class Enemy extends CollidesWithObjects {
     private collisionPoint: Vector2;
     private collisionRect: Rectangle;
     private pathLine: Line;
+    private path: Path;
     private follower: PathFollower;
     private acceleration: Vector2;
+    private worldBounds: Rectangle;
 
     constructor(config, gridUnit: number, size: number, scale: number) {
         super(config.scene, config.x, config.y, size, scale);
@@ -48,7 +57,8 @@ export default class Enemy extends CollidesWithObjects {
         this.color = 0X0B6382;
         const shadowColor = 0X031920;
         this.size = size;
-
+        this.worldBounds = config.scene.physics.world.bounds;
+        
         this.shadow = config.scene.add.circle(x, y, size / 3.5, shadowColor, 0.4);
         // const path1 = this.getLine(that.point, )
         const path1 = new Phaser.Curves.Path(x, y).circleTo(100);
@@ -97,36 +107,83 @@ export default class Enemy extends CollidesWithObjects {
 
             const rect = new Rectangle(crate.x - crateBody.width / 2, crate.y - crateBody.height / 2, crateBody.width, crateBody.height);
             const prectSize = crateBody.width * 2;
+            const pathCircle = new Circle(crate.x, crate.y, prectSize);
             const pathRect = new Rectangle(crate.x - prectSize / 2, crate.y - prectSize / 2, prectSize, prectSize);
-            const bbox = {
-                minX: crate.x - prectSize / 2,
-                minY: crate.y - prectSize / 2,
-                maxX: crate.x + prectSize,
-                maxY: crate.y + prectSize,
-            };
+            // const bbox = {
+            //     minX: crate.x - prectSize / 2,
+            //     minY: crate.y - prectSize / 2,
+            //     maxX: crate.x + prectSize,
+            //     maxY: crate.y + prectSize,
+            // };
 
             if (LineToRectangle(line, rect)) {
 
-                const result = (tree as any).search(bbox).filter(({crate: res}) => res !== crate);
-                const useCrate =  crate ;// result.length > 0 ? result[0].crate : crate;
-                this.collisionRect = useCrate.getBounds();
-                // pathRect.setPosition(useCrate.x, useCrate.y);
-                const useRect = new Rectangle(useCrate.x - prectSize / 2, useCrate.y - prectSize / 2, prectSize, prectSize);
+                // get the point of intersection
+                // const points = GetLineToCircle(line, pathCircle);
+                const points = GetLineToRectangle(line, pathRect);
 
-                // const path = pathRect.getPoints(4);
-                path = this.getSide(crate, pathRect);
-            } else {
-                // this.seek(player);
+                const corners =  pathRect.getPoints(4);
+                // get the closest point
+                if (corners){
+                // console.log(corners);
+
+                    const closest = corners.reduce((prev, curr) => {
+
+                        const distance = Between(point.x, point.y, curr.x, curr.y);
+                        if (!prev) return curr;
+                        if (distance < Between(point.x, point.y, prev.x, prev.y)) {
+                            return curr;
+                        }
+                        return prev;
+                    }, points[0]);     
+                    // this.collisionPoint = point2Vec(closest);
+                    const newLine = this.getLine(point, closest);
+                    // path = newLine.getPoints(2).map((item) => point2Vec(item));
+                }
+                // path = pathRect.getPoints(4).map((item) => point2Vec(item));
+                // this.path = new Path();
+                // iterate Rectangle points
+
+                for (let i = 1; i < 5; i++) {
+                    const corner = pathRect.getPoint(0.25 * i);
+
+                    if (i === 1) {
+                        this.path = new Path(corner.x, corner.y);
+                    } else {
+                        this.path.lineTo(corner.x, corner.y);
+                    }
+            
+                }
+                this.path.closePath();
+                // path = this.getSide(crate, pathRect);
+
+               
+                // const result = (tree as any).search(bbox).filter(({crate: res}) => res !== crate);
+                // const useCrate =  crate ; // result.length > 0 ? result[0].crate : crate;
+                // this.collisionRect = useCrate.getBounds();
+                // pathRect.setPosition(useCrate.x, useCrate.y);
+                // const useRect = new Rectangle(useCrate.x - prectSize / 2, useCrate.y - prectSize / 2, prectSize, prectSize);
+                // this.collisionRect = pathRect;
+                // path = pathRect.getPoints(8).map((item) => point2Vec(item));
+                // path = this.getSide(crate, pathRect);
+
+
+
+
+               
+                // this.pathLine= pA;
+                // console.log(path)
             }
         });
+        
         const predict = body.velocity.clone();
         predict.normalize();
         predict.scale(this.gridUnit);
         predict.add(point);
         if (!path) {
-            path = this.getLine(point, player);
+            this.seek(player);
         }
-        this.follow(path, predict);
+        this.followPath(path);
 
         body.velocity.add(this.acceleration);
         body.velocity.limit(this.speed);
@@ -271,6 +328,12 @@ export default class Enemy extends CollidesWithObjects {
           const { shape: head } = this.head;
           graphics.fillCircleShape(head);
           graphics.fillStyle(faceFeatColor, 1);
+          this.collisionPoint && dp(this.collisionPoint);
+          this.path && this.path.draw(graphics);
+          // set the line to orange
+          graphics.lineStyle(lineWidth, handColor);
+          this.pathLine && graphics.strokePoints(this.pathLine.getPoints(2));
+          // this.collisionRect && graphics.fillRectShape(this.collisionRect);
           const curve = new QuadraticBezier(browStart, browmiddle, browEnd);
           unubscuredShapes.push({type: -2, shape: curve, color: handColor});
           this.drawShapes(unubscuredShapes);
@@ -281,12 +344,19 @@ export default class Enemy extends CollidesWithObjects {
         this.setBlockedDirection(direction);
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
         const dir = Direction[direction];
+        const vel = this.speed / 3;
         switch (dir) {
-            case Direction.up : case Direction.down:
-                body.setVelocityY(0);
+            case Direction.up :
+                body.setVelocityY(vel);
                 break;
-            case Direction.left: case Direction.right:
-                body.setVelocityX(0);
+            case Direction.down:
+                body.setVelocityY(-vel);
+                break;
+            case Direction.left:
+                body.setVelocityX(vel);
+                break;
+            case Direction.right:
+                body.setVelocityX(-vel);
                 break;
             default:
                 body.setVelocity(0);
@@ -320,40 +390,84 @@ export default class Enemy extends CollidesWithObjects {
         res.add(ab);
         return res;
     }
-    private follow(p: Line, predictLoc: Vector2) {
+    private getGridSizeLength(){
+        const {left, right, top, bottom} = this.worldBounds;
+        const width = right - left;
+        const height = bottom - top;
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        const cols = 16;
+        const rows = 21;
 
-        // Find the normal point along the path.
-        const a = p.getPointA();
-        const b = p.getPointB();
-        this.pathLine = p;
-        const normalPoint = this.getNormalPoint(predictLoc, a, b);
+        const grid = new Array(cols);
 
-        // Move a little further along the path and set a target.
-        const dir = b.subtract(a);
-        dir.normalize();
-        dir.scale(this.gridUnit * 25);
-        const target = normalPoint.add(dir);
-        // If we are off the path, seek that target in order to stay on the path.
-        const distance = normalPoint.distance(predictLoc);
-        if (distance > this.gridUnit * 10) {
-            this.collisionPoint = target;
+        console.log('w', width, (width / body.width));
+        console.log('h', height, (height / body.height));
+        
+    }
+    private followPath(path: Vector2[]){
+        // this.getGridSizeLength();
+        const { point } = this as unknown as PerspectiveMixinType;
+       
+        // get the velocity of the object
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+
+        // predict the future location
+        const predict = body.velocity.clone();
+        predict.normalize();
+
+        // go ahead of the path by the size
+        predict.scale(this.size / this.gridUnit);
+
+        // get the predicted location
+        const predictLoc = body.position.clone().add(predict);
+        // const point = body.position.clone();
+
+        // find the normal point along the path
+        let worldRecord: number = Infinity;
+        let target;
+        for (let i = 0; i < path?.length - 1; i++) {
+            // console.log(123)
+            const a = path[i].clone();
+            const b = path[i + 1].clone();
+            if (point === a || point === b) {
+                console.log('point is on path');
+                continue;
+            }
+             let normalPoint = this.getNormalPoint(predictLoc, a, b);
+             // Check if the normal point is outside the line segment
+             if (normalPoint.x < a.x || normalPoint.x > b.x) {
+                normalPoint = b.clone();
+               }
+               
+               
+            // Length of normal from precictLoc to normalPoint
+            let distance = predictLoc.distance(normalPoint);
+
+            // Check if this normalPoint is nearest to the predictLoc
+            if (distance < worldRecord) {
+                this.pathLine = new Line(a.x, a.y, b.x, b.y);
+         
+                worldRecord = distance;
+                // let the target be the normal point
+                target = normalPoint.clone();
+                this.collisionPoint = target;
+
+            }
+            // seek the target
             this.seek(target);
         }
     }
-    private seek(target: Vector2) {
-        const { point } = this as unknown as PerspectiveMixinType;
-        const desired = target.clone();
-        desired.subtract(point);
-        desired.normalize();
-        const maxSpeed = new Vector2(this.speed, this.speed);
-        // // Calculating the desired velocity to target at max speed
-        desired.multiply(maxSpeed);
-        // Reynolds’s formula for steering force
-        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
-        const steer = desired.clone();
-        steer.subtract(body.velocity);
-        steer.limit(0.3);
+  
+    private seek(target: Vector2): void {
 
+        const { point } = this as unknown as PerspectiveMixinType;
+        const desired = target.clone().subtract(point);
+        // normalize the desired vector
+        desired.normalize();
+        desired.scale(this.speed);
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        const steer = desired.clone().subtract(body.velocity);
+        steer.limit(1);
         this.acceleration.add(steer);
     }
 }

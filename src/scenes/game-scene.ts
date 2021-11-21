@@ -65,6 +65,7 @@ export class GameScene extends Phaser.Scene {
     let startY = measureY - getSize(!isLandscape);
     startY = startY === 0 ? 0 : startY / 2;
     // create the biggest world that will fit on this screen.
+    
     this.background = this.physics.scene.add.tileSprite(getGameWidth(this) / 2, getGameHeight(this) / 2, getGameWidth(this), getGameHeight(this), 'stars');
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
     setBounds(this.physics.world);
