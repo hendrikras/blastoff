@@ -4,7 +4,7 @@ import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import {PerspectiveMixinType} from './PerspectiveMixin';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import ELLIPSE = Phaser.Geom.ELLIPSE;
-import {Direction, getArcShape, lineIntersect, point2Vec, pyt, unblockBut} from '../helpers';
+import {Direction, getArcShape, getHomoTheticCenter, findTangents, lineIntersect, point2Vec, pyt, unblockBut, findExternalTangents, getInnerHomoTheticCenter} from '../helpers';
 import Normalize = Phaser.Math.Angle.Normalize;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
@@ -59,28 +59,26 @@ export default class CollidesWithObjects extends ContainerLite {
         const { graphics, point, dp } = this as unknown as PerspectiveMixinType;
         let cross;
         if (!intersectPoint) {
-            const ext = new Line(circle1.x, circle1.y, circle2.x, circle2.y);
-            const crossb = Phaser.Geom.Line.Extend(ext, 0, this.gridUnit * 40);
-            const cp = point2Vec(circle1.getPoint(0));
-            const cp2 = point2Vec(circle2.getPoint(0));
-            const crossa = Phaser.Geom.Line.Extend(new Line(cp.x, cp.y, cp2.x, cp2.y), this.gridUnit * 40);
-            cross = lineIntersect(crossb.getPointA(), crossb.getPointB(), crossa.getPointA(), crossa.getPointB());
+            cross = getHomoTheticCenter(circle1, circle2);
+            if (cross === null) {
+            }
             graphics.lineStyle(3, 0x000, 1);
         } else {
             cross = intersectPoint;
         }
 
         const tp = this.getExternalTangent(circle1, circle2, cross);
-        if (tp && cross) {
-            const {p1, p2, p3, p4} = tp;
-            const shape = new Path();
-            shape.moveTo(p1);
+        // const tp2 = findExternalTangents(circle2, circle1, cross);
+
+        if (tp?.length > 0 && cross) {
+            const [p1, p2, p3, p4]= tp;
+            const shape = new Path(p1.x, p1.y);
             const mi = cross.clone().lerp(point, percent);
             const curve = new QuadraticBezier(p1, mi, p2);
             shape.add(curve);
-            shape.lineTo(p2);
-            shape.lineTo(p3);
-            shape.lineTo(p4);
+            shape.lineTo(p2.x, p2.y);
+            shape.lineTo(p3.x, p3.y);
+            shape.lineTo(p4.x , p4.y);
 
             shape.closePath();
 
@@ -141,12 +139,13 @@ export default class CollidesWithObjects extends ContainerLite {
             return this.lastDirection;
         }
     }
-    protected getExternalTangent(circle1, circle2, crossPoint) {
-        if (circle1 && circle2 && crossPoint) {
+    
+    protected getExternalTangent(circle1, circle2, homoTheticCenter): Vector2[] {
+        if (circle1 && circle2 && homoTheticCenter) {
             const { graphics } = this as unknown as PerspectiveMixinType;
             graphics.fillStyle(0xb4d455, 1);
             graphics.lineStyle(4, 0x000, 1);
-            const getAngle = (c) => Normalize(BetweenPoints(c, crossPoint)) / (2 * Math.PI);
+            const getAngle = (c) => Normalize(BetweenPoints(c, homoTheticCenter)) / (2 * Math.PI);
             const angle1 = (getAngle(circle1) + 0.25) % 1;
             const angle2 = (angle1 + 0.5) % 1;
 
@@ -156,30 +155,32 @@ export default class CollidesWithObjects extends ContainerLite {
             const pp4 = circle2.getPoint(angle4);
             const lineA = Phaser.Geom.Line.Extend(this.getLine(pp2, pp4), circle1.radius, circle1.radius);
 
-            const intersectPoint = lineIntersect(lineA.getPointA(), lineA.getPointB(), circle1, crossPoint) as Vector2;
+            const intersectPoint = lineIntersect(lineA.getPointA(), lineA.getPointB(), circle1, homoTheticCenter) as Vector2;
             // tslint:disable-next-line:one-variable-per-declaration
-            let p1, p2, p3, p4, intersects;
+            let intersects: Array<Vector2> =[];
             if (intersectPoint) {
                 const halfpoint = point2Vec(circle2).lerp(intersectPoint, 0.5);
                 const measureCircle = new Circle(halfpoint.x, halfpoint.y, halfpoint.distance(intersectPoint));
-                intersects = GetCircleToCircle(measureCircle, circle2);
-            }
-            if (intersects?.length > 0) {
-                p1 = intersects[0];
-                p2 = intersects[1];
+                intersects = GetCircleToCircle(measureCircle, circle2).map(p => point2Vec(p));
+                if (intersects?.length === 0) {
+                     return [] 
+                }
+                const [p1, p2] = intersects;
                 const lineB = new Line(p1.x, p1.y, intersectPoint.x, intersectPoint.y);
                 const lineC = new Line(p2.x, p2.y, intersectPoint.x, intersectPoint.y);
                 const d = point2Vec(circle1).distance(circle2);
                 const lineD = Phaser.Geom.Line.Extend(lineB, d, 0);
                 const lineE = Phaser.Geom.Line.Extend(lineC, d, 0);
-                p4 = lineD.getPointA();
-                p3 = lineE.getPointA();
-            }
+                const p4 = lineD.getPointA();
+                const p3 = lineE.getPointA();
+                intersects.push(p3);
+                intersects.push(p4);
 
-            const result = {p1, p2, p3, p4};
-            return p1 && p2 && p3 && p4 ? result : false;
+                return intersects;
+            }
         }
-        return false;
+        return [];
+
     }
     protected getLine(p1, p2) {
         const line = new Line(p1.x, p1.y, p2.x, p2.y);

@@ -62,20 +62,20 @@ export class BootScene extends Phaser.Scene {
     // Load sample assets
 
     // Source: Open Game Art
-    this.load.image('man', 'assets/character.png');
+
     this.load.image('prison', 'assets/prison.svg');
     this.load.image('rocket', 'assets/rocket.svg');
     this.load.image('tile', 'assets/parkay-floor.svg');
     this.load.image('stars', 'assets/stars.svg');
-    this.load.image('flower', 'assets/buttercup_flower.svg');
+
     // this.load.image('enemy', 'assets/robots.svg');
-    this.load.spritesheet('enemy', 'assets/robots.svg', { frameWidth: 500, frameHeight: 505 });
+    // this.load.spritesheet('enemy', 'assets/robots.svg', { frameWidth: 500, frameHeight: 505 });
     this.load.spritesheet('crates', 'assets/Crates.svg', { frameWidth: 105, frameHeight: 105 });
-    this.anims.create({
-      key: 'face',
-      frames: [ { key: 'enemy', frame: 1 } ],
-      frameRate: -1,
-  });
+  //   this.anims.create({
+  //     key: 'face',
+  //     frames: [ { key: 'enemy', frame: 1 } ],
+  //     frameRate: -1,
+  // });
 
   }
 
