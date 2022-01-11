@@ -65,11 +65,22 @@ export class GameScene extends Phaser.Scene {
     let startY = measureY - getSize(!isLandscape);
     startY = startY === 0 ? 0 : startY / 2;
     // create the biggest world that will fit on this screen.
-    
+
     this.background = this.physics.scene.add.tileSprite(getGameWidth(this) / 2, getGameHeight(this) / 2, getGameWidth(this), getGameHeight(this), 'stars');
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
     setBounds(this.physics.world);
     const {left, right, top, bottom, height, width, centerX, centerY} = this.physics.world.bounds;
+
+    // const region = [
+    //   [[1, 1], [1, 2], [2, 2], [2, 1]],
+    //   [[0, 0], [4, 0], [4, 4], [1, 4], [1, 3], [0, 3]],
+    // ];
+
+//     const f = 100;
+//     const fu = (arr) => [arr[0] * f, arr[1] * f];
+// // region[0].map(fu);
+//     const big = region.map((item) => item.map(fu));
+//     const decomp = decompose(region);
 
     const tiles = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, width, height, 'tile');
     tiles.setTileScale(this.gridUnit / 7);
@@ -83,21 +94,21 @@ export class GameScene extends Phaser.Scene {
       classType: CrateType, // This is the class we created
       active: true,
       visible: true,
-      repeat: 9,
+      repeat: 5,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
       collideWorldBounds: true,
       key: 'crates',
     };
     this.crates = this.physics.add.group(crateConfig);
-
-    this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
     const quarterCrate = this.gridUnit * 2.6;
 
-    this.prison.setScale(this.gridUnit / 14.1 );
-
-    this.prison.depth = 2;
-
-    this.crates.add(this.prison);
+    // this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
+    //
+    // this.prison.setScale(this.gridUnit / 14.1 );
+    //
+    // this.prison.depth = 2;
+    //
+    // this.crates.add(this.prison);
     const CubeType = PerspectiveObject(Wall);
 
     // const wall = new Wall(this, 0 , 0, 'prison', new Vector2(2,4));
@@ -136,7 +147,7 @@ export class GameScene extends Phaser.Scene {
     // @ts-ignore
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
     // @ts-ignore
-    // const cratesCollider = this.physics.add.collider(this.enemy, this.crates);
+    const cratesCollider = this.physics.add.collider(this.enemy, this.crates);
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
     // @ts-ignore
     this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
@@ -163,11 +174,19 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
+    // const array = [[0,1,2], [3,4,5], [6,7,8]];
+    // const map = this.make.tilemap({data: array, tileWidth: this.gridUnit, tileHeight: this.gridUnit});
+    // const layer = map.createLayer(0, 'tiles', 0 , 0);
+
+    // const navMesh = this.navMeshPlugin.buildMeshFromTilemap("mesh", map, [layer]);
     this.crates.children.iterate((crate, idx) => {
       placeCrate(crate, this.crates);
       this.fallingCrates.push(crate as Crate);
+      // const layer = map.createLayer(0, 'crates', 0 , 0);
     });
-
+    this.enemy.setDataEnabled();
+    // this.enemy.data.set('mesh', decomp);
+    // console.log(decomp);
     this.boundedCrates = [];
     this.updatePerspectiveDrawing();
     this.physics.world.on('worldbounds', (body /*, up, down, left, right*/) => {
@@ -209,6 +228,8 @@ export class GameScene extends Phaser.Scene {
     }, this);
   }
   private endGame(won: boolean = false) {
+    this.enemy.clearMesh();
+
     this.add
         .text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'you win' : 'game over').setFontSize(this.gridUnit * 5)
         .setDepth(5);
@@ -254,7 +275,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
   private blastOff() {
-    if (this.rocket.visible){
+    if (this.rocket.visible) {
       this.scene.scene.cameras.main.shake(500, 0.01);
     }
     this.rocket.visible = false;

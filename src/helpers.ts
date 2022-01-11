@@ -1,4 +1,5 @@
-import {Physics, Types, Math as PMath} from 'phaser';
+import {Physics, Types, Math as PMath, Geom} from 'phaser';
+
 import Crate from './gameobjects/Crate';
 import ArcadeBodyBounds = Phaser.Types.Physics.Arcade.ArcadeBodyBounds;
 import Wall from './gameobjects/Wall';
@@ -11,6 +12,8 @@ import FACING_DOWN = Phaser.Physics.Arcade.FACING_DOWN;
 import FACING_LEFT = Phaser.Physics.Arcade.FACING_LEFT;
 import FACING_RIGHT = Phaser.Physics.Arcade.FACING_RIGHT;
 import FACING_NONE = Phaser.Physics.Arcade.FACING_NONE;
+import { Point } from './plugins/phaser-navmesh/dist/navmesh/src';
+// import Between = Phaser.Math.Between;
 
 export interface ShapeCollectionItem {
     type: number;
@@ -125,11 +128,8 @@ export function calculateCircleCenter(A, B, C) {
     return new Vector2(x, y);
 
 }
-interface HasPos {
-    x: number;
-    y: number;
-}
-export function setPosition(target: HasPos, position: HasPos) {
+
+export function setPosition(target: Point, position: Point) {
     target.x = position.x;
     target.y = position.y;
 }
@@ -181,3 +181,172 @@ export const unblockBut = (direction, items) => Object.entries(items).forEach((i
 });
 
 export const getRandomInt = (max) => Math.floor(Math.random() * max);
+
+export function getHomoTheticCenter(circle1: Geom.Circle, circle2: Geom.Circle,) {
+    if (circle1.radius === circle2.radius) {
+        throw new Error('Circles must have different radii');
+    }
+    const extendLineBy = circle1.radius;
+    const ext = new Geom.Line(circle1.x, circle1.y, circle2.x, circle2.y);
+    const crossb = Phaser.Geom.Line.Extend(ext, 0, extendLineBy);
+    const cp = point2Vec(circle1.getPoint(0));
+    const cp2 = point2Vec(circle2.getPoint(0));
+    const crossa = Phaser.Geom.Line.Extend(new Geom.Line(cp.x, cp.y, cp2.x, cp2.y), extendLineBy);
+    const result = lineIntersect(crossb.getPointA(), crossb.getPointB(), crossa.getPointA(), crossa.getPointB());
+
+    return result
+}
+
+
+export function findTangents({x, y, radius}:Geom.Circle, point: Vector2) {
+    if (point){
+        const dx = x - point.x;
+        const dy = y - point.y;
+        const dd = Math.sqrt(dx * dx + dy * dy);
+        const a = Math.asin(radius / dd);
+        const b = Math.atan2(dy, dx);
+        
+        const t = b - a
+        const ta = { x:radius * Math.sin(t), y:radius * -Math.cos(t) };
+        
+        const t2 = b + a
+        const tb = { x:radius * -Math.sin(t2), y:radius * Math.cos(t2) };
+        const p1 = new Vector2(x + ta.x, y + ta.y);
+        const p2 = new Vector2(x + tb.x, y + tb.y);
+        return [p1, p2];
+    }
+    return [];
+}
+// function to get the perpedicular vector of a line
+export function getPerpendicular(line: Geom.Line) {
+    // get a direction vector between the two points
+    const dir = new Vector2(line.getPointB().x - line.getPointA().x, line.getPointB().y - line.getPointA().y);
+    const v1 = point2Vec(line.getPointA());
+    const v2 = point2Vec(line.getPointB());
+    // convert the line to a normalized unit vector
+    const b = (v2.clone().subtract(v1)).normalize();
+    const p = line.getRandomPoint();
+    const lamda = point2Vec(p).subtract(v1).dot(b);
+    return b.scale(lamda).add(v1);
+}
+// functiont to get the inner homothetic center between two circles
+export function getInnerHomoTheticCenter(circle1: Geom.Circle, circle2: Geom.Circle) {
+    // get a directional vector between the two circles
+    
+
+    // Get the perpedicular vector.
+    const v = getPerpendicular(new Geom.Line(circle1.x, circle1.y, circle2.x, circle2.y));
+    // get point on the first circle
+    const p1 = circle1.getPoint(0);
+    // get point on the second circle
+    const p2 = circle2.getPoint(0);
+    
+    // Calculate inner homothetic center.
+    const a = v.length();
+    const b = circle1.radius;
+    const c = circle2.radius;
+    const d = 2 * (v.x * (p1.x - p2.x) + v.y * (p1.y - p2.y));
+    const e = Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2) - Math.pow(c, 2) + Math.pow(b, 2);
+    const f = Math.pow(e, 2) - 4 * d * (Math.pow(b, 2) - Math.pow(c, 2));
+    if (f < 0) {
+        return null;
+    }
+    const x = (e - Math.sqrt(f)) / (2 * d);
+    const y = (e + Math.sqrt(f)) / (2 * d);
+    const center1 = new Vector2(p1.x + x * (p2.x - p1.x), p1.y + x * (p2.y - p1.y));
+
+    // Calculate outer homothetic center.
+    // if (circle1.radius !== circle2.radius) {
+        
+    // }
+
+    return center1;
+}
+
+export function findExternalTangents(circle1: Geom.Circle, circle2: Geom.Circle, homoTheticCenter: Vector2 | null) {
+    if (homoTheticCenter) {
+        const [p2, p1] = findTangents(circle1, homoTheticCenter);
+        const [p3, p4] = findTangents(circle2, homoTheticCenter);
+        return [p1, p2, p3, p4];
+    }
+    return [];
+}
+ 
+ function angleBetween(obj1, obj2) {
+    // angle in radians
+    var angleRadians = Math.atan2(obj2.y - obj1.y, obj2.x - obj1.x);
+    // angle in degrees
+    var angleDeg = (Math.atan2(obj2.y - obj1.y, obj2.x - obj1.x) * 180 / Math.PI);
+    return angleDeg;
+}
+
+export const getTriangle = (p1, p2, p3) => new Geom.Triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+// function that finds the angle between two circles
+export function getAngle(circle1: Geom.Circle, circle2: Geom.Circle) {
+    const v1 = point2Vec(circle1.getPoint(0));
+    const v2 = point2Vec(circle2.getPoint(0));
+    const v3 = v2.clone().subtract(v1);
+    // const angle = Math.atan2(v3.y, v3.x);
+    // const angle = 
+    const norm = Phaser.Math.Angle.Normalize(Phaser.Math. Angle.BetweenPoints(v1, v2)) / Math.PI * 2;
+    // const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
+
+    console.log('angle', norm);
+    return norm;
+}
+
+//function that finds the homothetic center of two circles
+export function getHomoTheticCenterAngle(circle1: Geom.Circle, circle2: Geom.Circle) {
+    const angle = Phaser.Math.Angle.Normalize(Phaser.Math.Angle.BetweenPoints(circle1, circle2));
+
+    const percentage = angle / (Math.PI * 2);
+    console.log('percentage', percentage);
+    const v1 = point2Vec(circle1.getPoint(0));
+    const v2 = point2Vec(circle2.getPoint(0));
+    const v3 = v1.clone().subtract(v2);
+    const v4 = v3.clone().rotate(angle);
+    const v5 = v4.clone().add(v2);
+    return v5;
+}
+
+// Check if rectangle a contains rectangle b
+// Each object (a and b) should have 2 properties to represent the
+// top-left corner (x1, y1) and 2 for the bottom-right corner (x2, y2).
+export function contains(a, b) {
+	return !(
+		b.x1 < a.x1 ||
+		b.y1 < a.y1 ||
+		b.x2 > a.x2 ||
+		b.y2 > a.y2
+	);
+}
+
+// Check if rectangle a overlaps rectangle b
+// Each object (a and b) should have 2 properties to represent the
+// top-left corner (x1, y1) and 2 for the bottom-right corner (x2, y2).
+export function overlaps(a, b) {
+	// no horizontal overlap
+	if (a.x1 >= b.x2 || b.x1 >= a.x2) return false;
+
+	// no vertical overlap
+	if (a.y1 >= b.y2 || b.y1 >= a.y2) return false;
+
+	return true;
+}
+
+// Check if rectangle a touches rectangle b
+// Each object (a and b) should have 2 properties to represent the
+// top-left corner (x1, y1) and 2 for the bottom-right corner (x2, y2).
+export function touches(a, b) {
+	// has horizontal gap
+	if (a.x1 > b.x2 || b.x1 > a.x2) return false;
+
+	// has vertical gap
+	if (a.y1 > b.y2 || b.y1 > a.y2) return false;
+
+	return true;
+}
+
+type XY = 0|1;
+export const overlap = ([topLeft, bottomRight], [topLeft2, bottomRight2], xy: XY = 0) =>
+    !(topLeft[xy] >= bottomRight2[xy] || topLeft2[xy] >= bottomRight[xy]);

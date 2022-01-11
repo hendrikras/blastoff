@@ -15,6 +15,7 @@
 //  ]
 //}
 {
+
   "compilerOptions": {
     "target": "ES2015",
     "module": "ES2015",
@@ -31,6 +32,17 @@
     "strictPropertyInitialization": false,
 
     "moduleResolution": "node",
-    "lib": ["dom", "esnext"]
-  }
+    "lib": ["dom", "esnext", "es2017", "es2016", "es2015", "es5"],
+  },
+  // "include": [ 
+  //   "./src/**/*.ts",
+  //   "./node_modules/navmesh/src/**/*.ts"
+  // ],
+  // "exclude": [
+  //   "node_modules",
+  //   "./node_modules",
+  //   "./node_modules/*",
+  //   "./node_modules/@types/node/index.d.ts",
+  //   "./node_modules/navmesh/src/**/*spec.ts"
+  // ]
 }
