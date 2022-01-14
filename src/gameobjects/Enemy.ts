@@ -29,7 +29,7 @@ import RTree = Phaser.Structs.RTree;
 import Path = Phaser.Curves.Path;
 import PointToLine = Phaser.Geom.Intersects.PointToLine;
 // import NavMesh from '../plugins/navmesh';
-import Point = Phaser.Geom.Point;
+// import Point = Phaser.Geom.Point;
 import RectangleToRectangle = Phaser.Geom.Intersects.RectangleToRectangle;
 import GetRectangleToRectangle = Phaser.Geom.Intersects.GetRectangleToRectangle;
 // import { NavMesh } from 'navmesh/src/index';
@@ -37,10 +37,11 @@ import GetRectangleToRectangle = Phaser.Geom.Intersects.GetRectangleToRectangle;
 import NavMesh from '../plugins/phaser-navmesh/src/phaser-navmesh'
 import { RectangleHull } from '../plugins/navmesh/src';
 import ArcadeBodyCollision = Phaser.Types.Physics.Arcade.ArcadeBodyCollision;
-import concaveman from 'concaveman';
-import gpc, { Polygon } from '../plugins/gpc';
-import jestConfig from '../plugins/navmesh/jest.config';
 
+import {Point} from '../plugins/navmesh/src/common-types';
+
+import gpc, { Polygon} from '../plugins/gpc';
+import jestConfig from '../plugins/navmesh/jest.config';
 export default class Enemy extends CollidesWithObjects {
     public get chasePlayer() {
       return this.$chasePlayer;
@@ -71,7 +72,7 @@ export default class Enemy extends CollidesWithObjects {
 
     constructor(config, gridUnit: number, size: number, scale: number) {
         super(config.scene, config.x, config.y, size, scale);
-        console.log('enemy', config.scene);
+
         const navMesh = config.scene.navMeshPlugin;
         this.navMesh = navMesh;
         this.scene = config.scene;
@@ -113,31 +114,17 @@ export default class Enemy extends CollidesWithObjects {
         this.navMesh.clear();
     }
     public exterminate(player: Vector2, crates) {
-
-//         var r = [  
-//   [[100,100], [100,200], [150, 200], [150, 300], [200, 300], [200,100]],
-//   [[0,0], [400,0], [400,400], [0,400]]
-// ];
-
-
-//     var rectangles = decompose(r);
-//     console.log('decompose', rectangles);
-
-
-    // begin
         const {point, graphics, dp} = this as unknown as PerspectiveMixinType;
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
 
-        let triangle, triangle2;
-        const {data} = this as unknown as GameObject;
-        // const mesh = data.get('mesh');
 
         let crateRegions: number[][][] = [];
 
-        const tree = new RTree();
-        const cornerPoints: Point[] = [];
+        // const tree = new RTree();
+        // const cornerPoints: Point[] = [];
         const { left, top, bottom, right} = this.scene.physics.world.bounds;
         const substractCubes: Polygon[] = [];
+        const holeCubes: Point[][] = [];
         // console.log(top, left, right, bottom);
         crates.children.iterate((crate: Crate) => {
             const crateBody = ((crate as unknown as GameObject).body as Physics.Arcade.Body);
@@ -145,19 +132,10 @@ export default class Enemy extends CollidesWithObjects {
             const w = (crateBody.width / 2) + div;
             const h = (crateBody.height / 2) + div;
             const {x, y} = crate as unknown as Point;
-            let isBoundry = false;
+
             const res = (num: number, boundry) => { 
-                if ((boundry === left || boundry === top) && num < boundry){
-                    isBoundry = true;
-                    return Math.trunc(boundry);
-                } else if ((boundry === right || boundry === bottom) && num > boundry){
-                    isBoundry = true;
-                    return  Math.trunc(boundry);
-                } else {
-                    return Math.trunc(num); 
-                }
+                return Math.trunc(num);
             };
-            // const res2 = (num: number, boundry) => num > boundry ? Math.trunc(boundry) - 1 : Math.trunc(num);
 
             const leftX = res(x - w, left);
             const topY = res(y - h, top);
@@ -167,123 +145,30 @@ export default class Enemy extends CollidesWithObjects {
             const current = [[leftX, topY], [leftX, bottomY], [rightX, bottomY], [rightX, topY]];
             const polys = current.map (([x,y]) => ({x, y}));
 
-            if (isBoundry) {
-                substractCubes.push(Polygon.fromPoints(polys));
-            }
-    
-            const rect = new Rectangle(leftX, topY, w * 2, h * 2);
-            let merged;
-            crateRegions.forEach((prev) => {
-                const [topLeft, bottomLeft, bottomRight, topRight] = prev;
-                const prevRect = new Rectangle(topLeft[0], topLeft[1], w * 2, h * 2);
-                if (RectangleToRectangle(rect, prevRect)) {
-                    // const map = points.map((point) => [point.x, point.y]);
-                    // const concave = concaveman(current.concat(prev));
-                    
-                    // const polys = current.map (([x,y]) => ({x, y})); 
-                    const polys2 = prev.map (([x,y]) => ({x, y}));
 
-                    const un = Polygon.fromPoints(polys);
-                    const union = un.union(Polygon.fromPoints(polys2)) as unknown as {pointList: Point[]};
-                    const unionArr = union?.pointList.map((point) => [point.x, point.y]);
-                    const r = unionArr.slice().reverse();
-                    // console.log('U', unionArr.reverse(), current,);
-                    // find the index that has the smallest values
-                    let smallest;
-                    r.forEach((point, index) => {
-                        const val = point[0] + point[1];
-                        if (smallest === undefined || val < smallest.val) {
-                            smallest =  {val, index};
-                        }
-                    });
-                   
-                    merged = r.slice(smallest.index, r.length).concat(r.slice(0, smallest.index));
-                    // return;
-
-                
-                    // merged = unionArr;
-
-                    // const p = this.shape2Path(unionArr).curves.reverse();
-                    // let res: any[] = [];
-                    // for (let j = 0; j < p.length; j++) {
-                    //     if (j === 0) {
-                    //         res.push(p[j].p0);
-                    //         res.push(p[j].p1);
-                    //     } else {
-                    //         // res.push(p[j].p1);
-                    //         res.push(p[j].p0);
-                    //     }
-                    // }
-
-                    // // console.log(res);
-                    // merged = res.map(({x, y}) => [x, y]);
-                    // straigthen the concaved polygon
-                   
-                    // for (let i = 0; i < concave.length; i++) {
-                    //     const p = concave[i];
-                    //     const p2 = concave[(i + 1) % concave.length];
-                    //     const point: Point = new Point(p[0], p[1]);
-                    //     const point2 = new Point(p2[0], p2[1]);
-                    //     // get the angle between the two points
-                    //     const angle = Normalize(Phaser.Math.Angle.BetweenPoints(point, point2));
-                    //     // convert to degrees
-                    //     const degrees = Phaser.Math.RadToDeg(angle);
-                    //     const div = degrees / 45
-                    //     if (div % div !== 0){
-                    //         const line = this.getLine(point, point2);
-                    //         console.log(line);
-                    //         this.pathLine =line;
-                    //     }
-                    //     console.log(div % div);
-                    //     // const line = new Line(point[0], point[1], point2[0], point2[1]);
-                    //     // console.log(line);
-                    //     // this.collisionPoint = point2Vec(line.getPointB());
-                    //     // this.pathLine = line;
-                        
-                    // }
-
-                    // isUnMerged = false;
-                    // prev = concave;
-                    // const path = this.shape2Path(concave);
-                    // this.path = path;
-                    // console.log(path);
-                    // console.log('merged', concave, current);
-                    // const getDir = (rect) :ArcadeBodyCollision => ({
-                    //     up:  LineToRectangle(rect.getLineA(), prevRect),
-                    //     right: LineToRectangle(rect.getLineB(), prevRect),
-                    //     down: LineToRectangle(rect.getLineC(), prevRect),
-                    //     left: LineToRectangle(rect.getLineD(), prevRect),
-                    //     none: false
-                    // });
-                }
-            });
-            
-            if (crateRegions.length === 0 || !merged) {
-                !isBoundry && crateRegions.push(current);
-            }
-            if (merged) {
-                crateRegions = crateRegions.slice(1);
-                crateRegions.push(merged);
-            }
-
-            // const {left, right, top, bottom} = crate.getBounds();
-
-            //  Insert our entry into the RTree:
-            // (tree as any).insert({left, right, top, bottom, crate});
+            holeCubes.push(polys);
         });
         // console.log(crateRegions);
         const region = [[Math.trunc(left), Math.trunc(top)], [Math.trunc(right), Math.trunc(top)], [Math.trunc(right), Math.trunc(bottom)], [Math.trunc(left), Math.trunc(bottom)]];
         const worldbox = Polygon.fromPoints(region.map (([x,y]) => ({x, y})) );
         
         let sub = worldbox;
-        substractCubes.forEach((poly) => {
-            sub = sub.difference(poly);
-        });
-          // console.log(sub.toVertices().bounds.slice().reverse());\
 
-        const newreg = sub.toVertices().bounds[0].map((point) => [point.x, point.y]);
-        crateRegions.push(newreg);
-        // console.log(crateRegions);  
+        const {bounds: inbounds} = sub.toVertices();
+        const sorted = holeCubes;
+        // console.log('holes', sorted);
+        // console.log(bounds, holes, holeCubes);
+
+        const {bounds, holes} = Polygon.fromVertices({bounds: inbounds, holes: sorted}).toVertices();
+        // const punctured = Polygon.fromVertices({bounds, holes: sorted}).toVertices();
+        // console.log(withHoles);
+        // console.log('processed', holes, bounds);
+        // const newreg = bounds.forEach(bound => bound.map((point) => [point.x, point.y])) ;
+        holes.forEach(hole =>  crateRegions.push(hole.map((point) => [point.x, point.y])));
+        bounds.forEach(bound =>  crateRegions.push(bound.map((point) => [point.x, point.y])));
+        
+        // crateRegions.push(newreg);
+
         const partitioned = decompose(crateRegions);
         const polys = partitioned.map ((decomp) => {
                 const topLeft = new Vector2(decomp[0][0], decomp[0][1]);
@@ -296,22 +181,9 @@ export default class Enemy extends CollidesWithObjects {
                 ];
             },
         );
-
-        // const hulls = partitioned.map((decomp) => {
-        //         const topLeft = new Vector2(decomp[0][0], decomp[0][1]);
-        //         const bottomRight = new Vector2(decomp[1][0], decomp[1][1]);
-        //         return new RectangleHull(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
-        //     });
-
-        // console.log(polys)
-        // const navMesh = this.navMesh.buildPolysFromGridMap(polys);
-        // const navMesh = new NavMesh(polys);
-
-      
-        // const polygons = hulls.map((hull) => hull.toPoints());
-        // console.log(polys, polygons);
+ 
         const navMesh = this.navMesh.buildMeshfromPolygons('mesh', polys);
-        navMesh.enableDebug(); // Creates a Phaser.Graphic   s overlay on top of the screen
+        // navMesh.enableDebug(); // Creates a Phaser.Graphic   s overlay on top of the screen
         navMesh.debugDrawClear(); // Clears the overlay
         // Visualize the underlying navmesh
         navMesh.debugDrawMesh({
@@ -320,14 +192,10 @@ export default class Enemy extends CollidesWithObjects {
           drawNeighbors: false,
           drawPortals: false,
         });
-        // Visualize an individual path
-        // navMesh.debugDrawPath(path, 0xffd900);
-        
-        
 
         const navPath = navMesh.findPath(point, player);
         navMesh.debugDrawPath(navPath, 0xffd900);
-
+  
         if (navPath) {
             const start = navPath.shift() as Vector2;
             const path = new Path(start.x, start.y);
@@ -359,8 +227,8 @@ export default class Enemy extends CollidesWithObjects {
             const [p1, p2, p3, p4] = col;
 
             // Create triangles from point to player
-            triangle = getTriangle(p3, p4, p1);
-            triangle2 = getTriangle(p1, p2, p3);
+            // triangle = getTriangle(p3, p4, p1);
+            // triangle2 = getTriangle(p1, p2, p3);
             // this.path = new Path(p1.x, p1.y);
             // this.path.lineTo(p2);
             // this.path.lineTo(p3);
