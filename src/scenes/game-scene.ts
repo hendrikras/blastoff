@@ -94,7 +94,7 @@ export class GameScene extends Phaser.Scene {
       classType: CrateType, // This is the class we created
       active: true,
       visible: true,
-      repeat: 5,
+      repeat: 9,
       setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
       collideWorldBounds: true,
       key: 'crates',
