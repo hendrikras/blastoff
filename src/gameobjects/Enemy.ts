@@ -1,10 +1,10 @@
-import {Curves, Geom, Physics, Scene} from 'phaser';
+import {Physics, Scene} from 'phaser';
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import PerspectiveObject, {PerspectiveMixinType} from './PerspectiveMixin';
 import SphereClass from './Sphere';
-import {Direction, getTriangle, point2Vec, setPosition, ShapeCollectionItem, findExternalTangents, getHomoTheticCenter, getInnerHomoTheticCenter, getHomoTheticCenterAngle} from '../helpers';
+import {Direction, point2Vec, setPosition, ShapeCollectionItem} from '../helpers';
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
 import Vector2 = Phaser.Math.Vector2;
@@ -18,30 +18,13 @@ import GameObject = Phaser.GameObjects.GameObject;
 import Rectangle = Phaser.Geom.Rectangle;
 import decompose from 'rectangle-decomposition';
 
-import LineToRectangle = Phaser.Geom.Intersects.LineToRectangle;
-import GetLineToRectangle = Phaser.Geom.Intersects.GetLineToRectangle;
-import GetLineToCircle = Phaser.Geom.Intersects.GetLineToCircle;
-import RectangleToTriangle = Phaser.Geom.Intersects.RectangleToTriangle;
-
 import Between = Phaser.Math.Distance.Between;
-import PathFollower = Phaser.GameObjects.PathFollower;
-import RTree = Phaser.Structs.RTree;
 import Path = Phaser.Curves.Path;
-import PointToLine = Phaser.Geom.Intersects.PointToLine;
-// import NavMesh from '../plugins/navmesh';
-// import Point = Phaser.Geom.Point;
-import RectangleToRectangle = Phaser.Geom.Intersects.RectangleToRectangle;
-import GetRectangleToRectangle = Phaser.Geom.Intersects.GetRectangleToRectangle;
-// import { NavMesh } from 'navmesh/src/index';
-// import scenes from '../scenes';
-import NavMesh from '../plugins/phaser-navmesh/src/phaser-navmesh'
-import { RectangleHull } from '../plugins/navmesh/src';
-import ArcadeBodyCollision = Phaser.Types.Physics.Arcade.ArcadeBodyCollision;
+// import NavMesh from '../plugins/phaser-navmesh/src/phaser-navmesh'
 
 import {Point} from '../plugins/navmesh/src/common-types';
+import { Polygon} from '../plugins/gpc';
 
-import gpc, { Polygon} from '../plugins/gpc';
-import jestConfig from '../plugins/navmesh/jest.config';
 export default class Enemy extends CollidesWithObjects {
     public get chasePlayer() {
       return this.$chasePlayer;
@@ -90,8 +73,6 @@ export default class Enemy extends CollidesWithObjects {
         this.worldBounds = config.scene.physics.world.bounds;
 
         this.shadow = config.scene.add.circle(x, y, size / 3.5, shadowColor, 0.4);
-        // const path1 = this.getLine(that.point, )
-        const path1 = new Phaser.Curves.Path(x, y).circleTo(100);
 
         that.add(this.shadow);
         this.center = new Circle(x, y, size * 1.2);
@@ -111,21 +92,24 @@ export default class Enemy extends CollidesWithObjects {
       this.blockedDirection[direction] = true;
     }
     public clearMesh() {
-        this.navMesh.clear();
+        this.navMesh.destroy();
     }
     public exterminate(player: Vector2, crates) {
-        const {point, graphics, dp} = this as unknown as PerspectiveMixinType;
+        const {point} = this as unknown as PerspectiveMixinType;
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
-
-
-        let crateRegions: number[][][] = [];
-
         // const tree = new RTree();
-        // const cornerPoints: Point[] = [];
-        const { left, top, bottom, right} = this.scene.physics.world.bounds;
-        const substractCubes: Polygon[] = [];
+        //     const reachSize = body.width;
+        //     const bbox = {
+        //         minX: crate.x - reachSize,
+        //         minY: crate.y - reachSize,
+        //         maxX: crate.x + reachSize,
+        //         maxY: crate.y + reachSize,
+        //     };
+        //         const result = (tree as any).search(bbox).filter((item) => item.crate !== crate);
+
+        const {left, top, bottom, right} = this.scene.physics.world.bounds;
         const holeCubes: Point[][] = [];
-        // console.log(top, left, right, bottom);
+
         crates.children.iterate((crate: Crate) => {
             const crateBody = ((crate as unknown as GameObject).body as Physics.Arcade.Body);
             const div = body.width / 2;
@@ -133,41 +117,22 @@ export default class Enemy extends CollidesWithObjects {
             const h = (crateBody.height / 2) + div;
             const {x, y} = crate as unknown as Point;
 
-            const res = (num: number, boundry) => { 
-                return Math.trunc(num);
-            };
+            const leftX = x - w;
+            const topY = y - h;
+            const rightX = x + w;
+            const bottomY = y + h;
 
-            const leftX = res(x - w, left);
-            const topY = res(y - h, top);
-            const rightX = res(x + w, right);
-            const bottomY = res(y + h, bottom);
-
-            const current = [[leftX, topY], [leftX, bottomY], [rightX, bottomY], [rightX, topY]];
-            const polys = current.map (([x,y]) => ({x, y}));
-
-
+            const polys: Point[] = [{x:leftX, y:topY}, {x:leftX, y:bottomY}, {x:rightX, y:bottomY}, {x:rightX, y:topY}];
             holeCubes.push(polys);
         });
-        // console.log(crateRegions);
-        const region = [[Math.trunc(left), Math.trunc(top)], [Math.trunc(right), Math.trunc(top)], [Math.trunc(right), Math.trunc(bottom)], [Math.trunc(left), Math.trunc(bottom)]];
-        const worldbox = Polygon.fromPoints(region.map (([x,y]) => ({x, y})) );
-        
-        let sub = worldbox;
-
-        const {bounds: inbounds} = sub.toVertices();
-        const sorted = holeCubes;
-        // console.log('holes', sorted);
-        // console.log(bounds, holes, holeCubes);
-
-        const {bounds, holes} = Polygon.fromVertices({bounds: inbounds, holes: sorted}).toVertices();
-        // const punctured = Polygon.fromVertices({bounds, holes: sorted}).toVertices();
-        // console.log(withHoles);
-        // console.log('processed', holes, bounds);
-        // const newreg = bounds.forEach(bound => bound.map((point) => [point.x, point.y])) ;
-        holes.forEach(hole =>  crateRegions.push(hole.map((point) => [point.x, point.y])));
-        bounds.forEach(bound =>  crateRegions.push(bound.map((point) => [point.x, point.y])));
-        
-        // crateRegions.push(newreg);
+        const region: Point[] = [{x:left, y:top}, {x:right, y:top}, {x:right, y:bottom}, {x:left, y:bottom}];
+        const worldbox = Polygon.fromPoints(region);
+        const {bounds: inbounds} = worldbox.toVertices();
+        const crateRegions: number[][][] = [];
+        const {bounds, holes} = Polygon.fromVertices({bounds: inbounds, holes: holeCubes}).toVertices();
+        const mapper = ({x, y}) => [x, y];
+        holes.forEach(hole => crateRegions.push(hole.map(mapper)));
+        bounds.forEach(bound => crateRegions.push(bound.map(mapper)));
 
         const partitioned = decompose(crateRegions);
         const polys = partitioned.map ((decomp) => {
@@ -183,7 +148,7 @@ export default class Enemy extends CollidesWithObjects {
         );
  
         const navMesh = this.navMesh.buildMeshfromPolygons('mesh', polys);
-        // navMesh.enableDebug(); // Creates a Phaser.Graphic   s overlay on top of the screen
+        // navMesh.enableDebug(); // Creates a Phaser.Graphics overlay on top of the screen
         navMesh.debugDrawClear(); // Clears the overlay
         // Visualize the underlying navmesh
         navMesh.debugDrawMesh({
@@ -200,139 +165,12 @@ export default class Enemy extends CollidesWithObjects {
             const start = navPath.shift() as Vector2;
             const path = new Path(start.x, start.y);
             // tslint:disable-next-line:no-unused-expression
-            navPath?.length > 0 && navPath?.forEach(({x, y}, index) => {
+            navPath?.length > 0 && navPath?.forEach(({x, y}) => {
                 path.lineTo(x, y);
             });
 
             this.follow(path);
         }
-
-        const playerCircle = new Circle(player.x, player.y, body.width / 2);
-        const center = new Circle(this.center.x, this.center.y, this.center.radius);
-
-        // const cross = getHomoTheticCenter(copyCircle(this.center), copyCircle(playerCircle), this.gridUnit);
-        // const col = this.getExternalTangent(copyCircle(playerCircle), copyCircle(this.center), cross);
-        const cross = getHomoTheticCenter(center, playerCircle);
-        // const cross2 = getInnerHomoTheticCenter(center, playerCircle);
-        // const cross3 = getHomoTheticCenterAngle(center, playerCircle);
-        const col = findExternalTangents(playerCircle, center, cross);
-        // this.collisionPoint = cross as Vector2;
-        // const col2 = this.getExternalTangent(playerCircle, center, cross as unknown as Geom.Point);
-        const getxy = ({x, y}) => ({x, y});
-
-        const arr = col.map(getxy);
-        // const arr2 = col2.map(getxy);
-        // console.log('arr', arr, arr2);
-        if (col?.length > 0) {
-            const [p1, p2, p3, p4] = col;
-
-            // Create triangles from point to player
-            // triangle = getTriangle(p3, p4, p1);
-            // triangle2 = getTriangle(p1, p2, p3);
-            // this.path = new Path(p1.x, p1.y);
-            // this.path.lineTo(p2);
-            // this.path.lineTo(p3);
-            // this.path.lineTo(p4);
-            // this.path.closePath();
-
-            // this.pathTriangle = triangle;
-            // this.pathTriangle2 = triangle2;
-        }
-
-        // const { add } = this as unknown as Sce;
-
-        // let canSeePlayer = true;
-
-        // crates.children.iterate((crate: Crate) => {
-        //
-        //     const {body: crateBody} = crate;
-        //
-        //     const rect = new Rectangle(crate.x - crateBody.width / 2, crate.y - crateBody.height / 2, crateBody.width, crateBody.height);
-        //     const prectSize = crateBody.width * 2;
-        //     const pathCircle = new Circle(crate.x, crate.y, prectSize);
-        //     const pathRect = new Rectangle(crate.x - prectSize / 2, crate.y - prectSize / 2, prectSize, prectSize);
-        //     const bodyRect = new Rectangle(point.x - body.width / 2, point.y - body.height / 2, body.width, body.height);
-        //     // this.collisionRect = bodyRect;
-        //
-        //     const reachSize = body.width;
-        //     const bbox = {
-        //         minX: crate.x - reachSize,
-        //         minY: crate.y - reachSize,
-        //         maxX: crate.x + reachSize,
-        //         maxY: crate.y + reachSize,
-        //     };
-        //
-        //     if (RectangleToTriangle(rect, triangle) || RectangleToTriangle(rect, triangle2)) {
-        //         canSeePlayer = false;
-        //         // get the point of intersection
-        //         // const points = GetLineToCircle(line, pathCircle);
-        //         // const points = GetLineToRectangle(line, pathRect);
-        //
-        //         // const corners =  pathRect.getPoints(4);
-        //         // get the closest point
-        //
-        //         // path = pathRect.getPoints(4).map((item) => point2Vec(item));
-        //         // this.path = new Path();
-        //         // iterate Rectangle points
-        //
-        //         // check if the point is in the rectangle
-        //
-        //             // console.log(123, target);
-        //
-        //             // this.followPath(corners);
-        //         // path = this.getSide(crate, pathRect);
-        //
-        //         const result = (tree as any).search(bbox).filter((item) => item.crate !== crate);
-        //
-        //         const reducer = (accumulator, currentValue) => ({
-        //             top: currentValue.top < accumulator.top ? currentValue.top : accumulator.top,
-        //             bottom: currentValue.bottom > accumulator.bottom ? currentValue.bottom : accumulator.bottom,
-        //             left: currentValue.left < accumulator.left ? currentValue.left : accumulator.left,
-        //             right: currentValue.right > accumulator.right ? currentValue.right : accumulator.right,
-        //
-        //         });
-        //         const bounds = result?.length > 0 && result.reduce(reducer);
-        //         if (bounds) {
-        //             const rect = new Rectangle(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
-        //             // enlarge the rectangle
-        //             const rect2 = new Rectangle(rect.x - prectSize / 1.5, rect.y - prectSize / 1.5, rect.width + prectSize, rect.height + prectSize);
-        //
-        //             this.follow(this.shape2Path(rect2.getPoints(20)));
-        //         } else {
-        //             const path = this.rect2Path(pathRect);
-        //             // const path = this.circle2Path(pathCircle, 15);
-        //             path && this.follow(path);
-        //         }
-        //
-        //         // this.collisionRect = rect;
-        //
-        //         // const useCrate =  crate ; // result.length > 0 ? result[0].crate : crate;
-        //         // this.collisionRect = useCrate.getBounds();
-        //         // pathRect.setPosition(useCrate.x, useCrate.y);
-        //         // const useRect = new Rectangle(useCrate.x - prectSize / 2, useCrate.y - prectSize / 2, prectSize, prectSize);
-        //         // this.collisionRect = pathRect;
-        //         // path = pathRect.getPoints(8).map((item) => point2Vec(item));
-        //         // path = this.getSide(crate, pathRect);
-        //
-        //         // this.pathLine= pA;
-        //         // console.log(path)
-        //     }
-        // });
-
-        // if (canSeePlayer) {
-        //     this.seek(player);
-        // }
-
-        //
-        // const enemyVelocity = new Vector2(target.x - point.x , target.y  - point.y).normalize();
-        // const xSpeed = this.blockedDirection.left || this.blockedDirection.right ? 0 : this.speed;
-        // const ySpeed = this.blockedDirection.up || this.blockedDirection.down ? 0 : this.speed;
-        //
-        // if (this.pushedCrate) {
-        //     this.resetBlockedDirections(this.pushedCrate);
-        // }
-        // // body.setVelocity(this.seek(target));
-        // body.setVelocity(enemyVelocity.x * xSpeed, enemyVelocity.y * ySpeed);
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
         if (this.pushedCrate && this.playersCrate !== crate) {

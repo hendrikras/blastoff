@@ -70,18 +70,6 @@ export class GameScene extends Phaser.Scene {
     const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
     setBounds(this.physics.world);
     const {left, right, top, bottom, height, width, centerX, centerY} = this.physics.world.bounds;
-
-    // const region = [
-    //   [[1, 1], [1, 2], [2, 2], [2, 1]],
-    //   [[0, 0], [4, 0], [4, 4], [1, 4], [1, 3], [0, 3]],
-    // ];
-
-//     const f = 100;
-//     const fu = (arr) => [arr[0] * f, arr[1] * f];
-// // region[0].map(fu);
-//     const big = region.map((item) => item.map(fu));
-//     const decomp = decompose(region);
-
     const tiles = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, width, height, 'tile');
     tiles.setTileScale(this.gridUnit / 7);
     const CrateType =  PerspectiveObject(CrateFace(Crate));
@@ -102,13 +90,13 @@ export class GameScene extends Phaser.Scene {
     this.crates = this.physics.add.group(crateConfig);
     const quarterCrate = this.gridUnit * 2.6;
 
-    // this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
-    //
-    // this.prison.setScale(this.gridUnit / 14.1 );
-    //
-    // this.prison.depth = 2;
-    //
-    // this.crates.add(this.prison);
+    this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
+    
+    this.prison.setScale(this.gridUnit / 14.1 );
+    
+    this.prison.depth = 2;
+    
+    this.crates.add(this.prison);
     const CubeType = PerspectiveObject(Wall);
 
     // const wall = new Wall(this, 0 , 0, 'prison', new Vector2(2,4));
