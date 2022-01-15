@@ -12,7 +12,7 @@ import FACING_DOWN = Phaser.Physics.Arcade.FACING_DOWN;
 import FACING_LEFT = Phaser.Physics.Arcade.FACING_LEFT;
 import FACING_RIGHT = Phaser.Physics.Arcade.FACING_RIGHT;
 import FACING_NONE = Phaser.Physics.Arcade.FACING_NONE;
-import { Point } from './plugins/phaser-navmesh/dist/navmesh/src';
+import { Point } from './plugins/navmesh/src/common-types';
 // import Between = Phaser.Math.Between;
 
 export interface ShapeCollectionItem {
