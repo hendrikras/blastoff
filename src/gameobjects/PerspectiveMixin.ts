@@ -1,4 +1,4 @@
-import {Scene, Math as PMath} from 'phaser';
+import {Math as PMath} from 'phaser';
 import {Constructor, Direction, lineIntersect} from '../helpers';
 import Vector2 = Phaser.Math.Vector2;
 import Wall from './Wall';
@@ -24,7 +24,7 @@ class extends Base {
 
   private graphics;
   private vanishPoint: Vector2;
-  private color: number;
+  public color: number;
   private gridUnit: number;
   private MeasurePointY1: PMath.Vector2;
   private MeasurePointY2: PMath.Vector2;
@@ -33,7 +33,7 @@ class extends Base {
   private vertices: Vector2[];
   private dimensions: PMath.Vector2;
   private point: PMath.Vector2;
-  private key;
+  public key;
   private intersectMap: Ref[];
 
     constructor(...args: any[]) {

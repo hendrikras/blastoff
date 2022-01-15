@@ -45,7 +45,7 @@ export default class Player extends CollidesWithObjects {
     private step: number;
     private now: number;
 
-    private scene: Scene;
+    // private scene: Scene;
 
     constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, scale) {
         super(config.scene, config.x, config.y, size, size);
@@ -53,7 +53,7 @@ export default class Player extends CollidesWithObjects {
         body.setCollideWorldBounds(true);
 
         this.scene = config.scene;
-        const that = this as ContainerLite;
+        const that = this as unknown as ContainerLite;
         const {x, y} = config;
         this.color = 0XEFCAB7;
         const shadowColor = 0X031920;
@@ -78,7 +78,7 @@ export default class Player extends CollidesWithObjects {
         this.center = new Circle(x, y, size * 1.1);
         this.pathHelper = new Circle(x, y, size);
         this.feetCircle = new Circle(x, y, size);
-        that.add(this.shadow);
+        that.add(this.shadow as unknown as GameObject);
         that.add(this.shoe1);
         that.add(this.shoe2);
         this.shoe1.depth = 0;
@@ -107,9 +107,9 @@ export default class Player extends CollidesWithObjects {
     public update() {
 
         this.hasInput = false;
-        const that = this as ContainerLite;
+        const that = this as unknown as PerspectiveMixinType;
         that.graphics.clear();
-        that.graphics.lineStyle();
+        // that.graphics.lineStyle();
         const obscuredShapes: ShapeCollectionItem[] = [];
         const unubscuredShapes: ShapeCollectionItem[] = [];
 
@@ -124,8 +124,8 @@ export default class Player extends CollidesWithObjects {
         const {curve: eyeTopLine} = this.head.getSlice('x', 0.8);
         const {curve: eyeCenterLine, isObscured} = this.head.getSlice('x', 0.65);
         const {curve: eyeBottomLine} = this.head.getSlice('x', 0.4);
-        that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
-        that.shadow.depth = 0;
+        (this as unknown as ContainerLite).setChildPosition(this.shadow as unknown as GameObject, centerBottom.x, centerBottom.y);
+        (this.shadow as any).depth = 0;
         this.shoe1.depth = 0;
         this.shoe2.depth = 0;
         graphics.setDepth(2);
@@ -134,8 +134,8 @@ export default class Player extends CollidesWithObjects {
         const direction = Normalize(bodyAngle) / all;
 
         const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
-        that.setChildRotation(this.shoe1, bodyAngle);
-        that.setChildRotation(this.shoe2, bodyAngle);
+        this.setChildRotation(this.shoe1, bodyAngle);
+        this.setChildRotation(this.shoe2, bodyAngle);
 
         const rightShoulder = (direction + 0.25) % 1;
         const leftShoulder =  (direction + 0.75) % 1;
@@ -204,7 +204,7 @@ export default class Player extends CollidesWithObjects {
         let handPos1 = hand1;
         let handPos2 = hand2;
         if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) < this.size * 4.5) {
-            const {centerCenter: center} = that.head;
+            const {centerCenter: center} = this.head as unknown as PerspectiveMixinType;
             const circle = new Circle(center.x, center.y, this.size * 1.4);
             const a2 = (direction + 0.1) % 1;
             const b2 = (direction + 0.9) % 1;
@@ -278,7 +278,7 @@ export default class Player extends CollidesWithObjects {
     }
     private walk(direction) {
         const { graphics, point } = this as unknown as PerspectiveMixinType;
-        const container = this as ContainerLite;
+        const container = this as unknown as ContainerLite;
 
         // re-enable moving in a certain direction if passed a blockade
         if (this.pushedCrate) {

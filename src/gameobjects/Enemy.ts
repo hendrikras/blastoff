@@ -49,7 +49,7 @@ export default class Enemy extends CollidesWithObjects {
     private path: Path;
     private acceleration: Vector2;
     private worldBounds: Rectangle;
-    private scene: Scene;
+    // private scene: Scene;
     private reverse = false;
     private navMesh: any;
 
@@ -60,7 +60,7 @@ export default class Enemy extends CollidesWithObjects {
         this.navMesh = navMesh;
         this.scene = config.scene;
         const {x, y} = config;
-        const that = this as ContainerLite;
+        const that = this as unknown as ContainerLite;
         // that.body.setCollideWorldBounds(true);
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
         body.setCollideWorldBounds(true);
@@ -74,7 +74,7 @@ export default class Enemy extends CollidesWithObjects {
 
         this.shadow = config.scene.add.circle(x, y, size / 3.5, shadowColor, 0.4);
 
-        that.add(this.shadow);
+        that.add(this.shadow as unknown as GameObject);
         this.center = new Circle(x, y, size * 1.2);
         this.pathHelper = new Circle(x, y, size);
 
@@ -184,7 +184,7 @@ export default class Enemy extends CollidesWithObjects {
       }
 
       public update() {
-          const that = (this as ContainerLite);
+          const that = this as unknown as PerspectiveMixinType;
           that.predraw();
           const { dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
           if (this.pushedCrate) {
@@ -208,7 +208,7 @@ export default class Enemy extends CollidesWithObjects {
           const feetCircle = new Circle(hoverPosition.x, hoverPosition.y, sphere.radius / 2.3);
           graphics.fillCircleShape(feetCircle);
 
-          that.setChildPosition(this.shadow, centerBottom.x, centerBottom.y);
+          (this as unknown as ContainerLite).setChildPosition((this.shadow as unknown as GameObject), centerBottom.x, centerBottom.y);
           const bodyAngle = this.getBodyAngle();
           const direction = Normalize(bodyAngle) / all;
 
