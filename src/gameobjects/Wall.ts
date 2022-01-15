@@ -7,8 +7,8 @@ class Wall extends Phaser.GameObjects.Rectangle {
     get direction(): ArcadeBodyCollision {
         return this.$direction;
     }
-  private key;
-  private color: number;
+  public key;
+  public color: number;
   private $direction: ArcadeBodyCollision;
   constructor(scene: Scene, x: number , y: number, w: number, h: number, d, color: number, key = 'wall', direction: ArcadeBodyCollision = Collision4Direction(Direction.none)) {
        super(scene, x, y, w, h, color);

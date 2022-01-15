@@ -13,12 +13,13 @@ import {
   getGameWidth, getRandomInt, point2Vec,
   reachedBound,
 } from '../helpers';
-import PerspectiveObject from '../gameobjects/PerspectiveMixin';
+import PerspectiveObject, { PerspectiveMixinType } from '../gameobjects/PerspectiveMixin';
 import CrateFace from '../gameobjects/CrateFace';
 import PrisonFace from '../gameobjects/PrisonFace';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import EventEmitter = Phaser.Events.EventEmitter;
 import Vector2 = Phaser.Math.Vector2;
+import CollidesWithObjects from '../gameobjects/CollidesWithObjects';
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -31,7 +32,7 @@ const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
 export class GameScene extends Phaser.Scene {
   private gridUnit: number = 0;
   private player: ContainerLite;
-  private enemy: ContainerLite;
+  private enemy: Enemy;
   private prison: Physics.Arcade.Sprite;
   private rocket: Physics.Arcade.Sprite;
   private crates: Phaser.Physics.Arcade.Group;
@@ -136,7 +137,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
     // @ts-ignore
     const cratesCollider = this.physics.add.collider(this.enemy, this.crates);
-    this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap);
+    this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap as ArcadePhysicsCallback);
     // @ts-ignore
     this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
     this.fallingCrates = [];
@@ -255,7 +256,7 @@ export class GameScene extends Phaser.Scene {
             crate.update();
           }
         });
-    if (!this.player.isBlockedDirection('down')) {
+    if (!(this.player as unknown as CollidesWithObjects).isBlockedDirection('down')) {
       this.player.y += this.gravitySpeed;
     }
     if (!this.enemy.isBlockedDirection('down')) {
