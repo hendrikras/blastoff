@@ -1,6 +1,7 @@
-import {GameObjects, Physics, Scene, Types} from 'phaser';
+import {GameObjects, Physics, Types, Curves} from 'phaser';
 import {
     collidesOnAxes,
+    getArcCurve,
     getArcShape,
     impassable,
     point2Vec,
@@ -23,6 +24,9 @@ import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
 import Shape = Phaser.GameObjects.Shape;
 import GameObject = Phaser.GameObjects.GameObject;
+import Polygon from '../plugins/gpc';
+import { Point } from '../plugins/navmesh/src/common-types';
+import {Triangle} from 'phaser3-rex-plugins/plugins/gameobjects/shape/shapes/geoms';
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -133,7 +137,7 @@ export default class Player extends CollidesWithObjects {
         const bodyAngle = this.getBodyAngle();
         const direction = Normalize(bodyAngle) / all;
 
-        const relativeAngle  = Normalize(BetweenPoints(vanishPoint, point)) / all;
+        const relativeAngle = Normalize(BetweenPoints(vanishPoint, point)) / all;
         this.setChildRotation(this.shoe1, bodyAngle);
         this.setChildRotation(this.shoe2, bodyAngle);
 
@@ -235,8 +239,7 @@ export default class Player extends CollidesWithObjects {
         graphics.fillStyle(this.color, 1);
         graphics.fillCircleShape(this.head.shape);
 
-        // const lok1 =  getArcShape(point, this.gridUnit, 1.8, 1.5, bodyAngle + Math.PI); //{ x, y, radius: this.gridUnit , startAngle: bodyAngle - 0.1, endAngle: bodyAngle };
-        const lok1 =  { x, y, radius: this.gridUnit , startAngle: bodyAngle - 0.1, endAngle: bodyAngle };
+        const lok1 =  getArcShape(point, this.gridUnit, 1.8, 1.5, bodyAngle + Math.PI);
         const topBlonde = 0xd9b380;
         const bottomBlonde = 0xdc89f73;
         const bunp = equator.getPoint(relativeAngle - direction - 0.5 % 1);
@@ -244,28 +247,28 @@ export default class Player extends CollidesWithObjects {
         if (hair) {
             unubscuredShapes.push(hair);
         }
-        // const shape = getArcCurve(lok1);
         const topHair1 = getArcShape(point, this.size, 1, 2.7, bodyAngle);
         const topHair2 = getArcShape(point, this.size, 1.6, 1, bodyAngle);
-        unubscuredShapes.push({type: -1, shape: topHair1, color: topBlonde, strokeColor: 0X0866251});
-        unubscuredShapes.push({type: -1, shape: topHair2, color: topBlonde, strokeColor: 0X0866251});
-        unubscuredShapes.push({type: CIRCLE, shape: lok1, color: topBlonde});
+        const merge = Polygon.fromPoints(getArcCurve(topHair1).getPoints());
+        const merge2 = Polygon.fromPoints(getArcCurve(topHair2).getPoints());
+        const merge3 =  Polygon.fromPoints(getArcCurve(lok1).getPoints());
+        const concat = merge.union(merge2).union(merge3);
+        const {bounds} = concat.toVertices();
+        const [first] = bounds as unknown as Point[][];
+        const path = this.convertToPath(first);
+        path?.curves.length > 0 && unubscuredShapes.push({type: -3, shape: path, color: topBlonde, strokeColor: 0X0866251});
+
         graphics.lineStyle(this.gridUnit / 4, 0x000);
-
         graphics.fillStyle(this.color, 1);
-
         graphics.fillStyle(0x9f1f19, 0.7);
         dp(mouthPoint);
         graphics.fillStyle(0x9f1f19, 0.2);
-
         dp(eyeBottomLine.getPoint(cheek1));
         dp(eyeBottomLine.getPoint(cheek2));
-
         graphics.fillStyle(faceFeatColor, 1);
-
         graphics.fillStyle(0xFFFFFF, 1);
-        this.drawShapes(unubscuredShapes);
 
+        this.drawShapes(unubscuredShapes);
         graphics.lineStyle(0, 0);
     }
     public crateCollider = (me: Player, crate: Crate) => {
