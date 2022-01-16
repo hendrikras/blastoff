@@ -1,10 +1,10 @@
-import { Physics, Types, GameObjects } from 'phaser';
+import {Physics, Types, GameObjects, Curves} from 'phaser';
 import Crate from './Crate';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import {PerspectiveMixinType} from './PerspectiveMixin';
 import CIRCLE = Phaser.Geom.CIRCLE;
 import ELLIPSE = Phaser.Geom.ELLIPSE;
-import {Direction, getArcShape, getHomoTheticCenter, findTangents, lineIntersect, point2Vec, pyt, unblockBut, findExternalTangents, getInnerHomoTheticCenter} from '../helpers';
+import {Direction, getHomoTheticCenter, lineIntersect, point2Vec, pyt, unblockBut} from '../helpers';
 import Normalize = Phaser.Math.Angle.Normalize;
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import GetCircleToCircle = Phaser.Geom.Intersects.GetCircleToCircle;
@@ -17,6 +17,7 @@ import QuadraticBezier = Phaser.Curves.QuadraticBezier;
 import RadToDeg = Phaser.Math.RadToDeg;
 import DegToRad = Phaser.Math.DegToRad;
 import SphereClass from './Sphere';
+import {Point} from '../plugins/navmesh/src/common-types';
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
@@ -56,11 +57,12 @@ export default class CollidesWithObjects extends ContainerLite {
        this.pushCrate(Direction[this.facingSide(crate)], crate);
     }
     protected getTrepazoid(circle1, circle2, color, percent, intersectPoint: Vector2 | null = null, strokeColor = -1) {
-        const { graphics, point, dp } = this as unknown as PerspectiveMixinType;
+        const { graphics, point } = this as unknown as PerspectiveMixinType;
         let cross;
         if (!intersectPoint) {
             cross = getHomoTheticCenter(circle1, circle2);
             if (cross === null) {
+                return;
             }
             graphics.lineStyle(3, 0x000, 1);
         } else {
@@ -71,7 +73,7 @@ export default class CollidesWithObjects extends ContainerLite {
         // const tp2 = findExternalTangents(circle2, circle1, cross);
 
         if (tp?.length > 0 && cross) {
-            const [p1, p2, p3, p4]= tp;
+            const [p1, p2, p3, p4] = tp;
             const shape = new Path(p1.x, p1.y);
             const mi = cross.clone().lerp(point, percent);
             const curve = new QuadraticBezier(p1, mi, p2);
@@ -139,7 +141,7 @@ export default class CollidesWithObjects extends ContainerLite {
             return this.lastDirection;
         }
     }
-    
+
     protected getExternalTangent(circle1, circle2, homoTheticCenter): Vector2[] {
         if (circle1 && circle2 && homoTheticCenter) {
             const { graphics } = this as unknown as PerspectiveMixinType;
@@ -157,13 +159,13 @@ export default class CollidesWithObjects extends ContainerLite {
 
             const intersectPoint = lineIntersect(lineA.getPointA(), lineA.getPointB(), circle1, homoTheticCenter) as Vector2;
             // tslint:disable-next-line:one-variable-per-declaration
-            let intersects: Array<Vector2> =[];
+            let intersects: Vector2[] = [];
             if (intersectPoint) {
                 const halfpoint = point2Vec(circle2).lerp(intersectPoint, 0.5);
                 const measureCircle = new Circle(halfpoint.x, halfpoint.y, halfpoint.distance(intersectPoint));
-                intersects = GetCircleToCircle(measureCircle, circle2).map(p => point2Vec(p));
+                intersects = GetCircleToCircle(measureCircle, circle2).map((p) => point2Vec(p));
                 if (intersects?.length === 0) {
-                     return [] 
+                     return [];
                 }
                 const [p1, p2] = intersects;
                 const lineB = new Line(p1.x, p1.y, intersectPoint.x, intersectPoint.y);
@@ -182,11 +184,7 @@ export default class CollidesWithObjects extends ContainerLite {
         return [];
 
     }
-    protected getLine(p1, p2) {
-        const line = new Line(p1.x, p1.y, p2.x, p2.y);
-        return line;
-    }
-
+    protected getLine = (p1, p2) => new Line(p1.x, p1.y, p2.x, p2.y);
     protected getDomeShape(position, radius) {
         const { shape, pi2: all } = this.head;
         const between = Normalize(BetweenPoints(position, shape));
@@ -210,5 +208,13 @@ export default class CollidesWithObjects extends ContainerLite {
         const toCenter = new Line(pointB.x, pointB.y, shape.x, shape.y);
         const endAngle = Normalize(Line.ReflectAngle( toCenter, reflectingLine));
         return { x: position.x, y: position.y, radius, startAngle, endAngle, anticlockwise: false  };
+    }
+    protected convertToPath(points: Point[]) {
+        const start = points.shift() as Vector2;
+        const path = new Path(start.x, start.y);
+        points?.length > 0 && points?.forEach(({x, y}) => {
+            path.lineTo(x, y);
+        });
+        return path;
     }
   }

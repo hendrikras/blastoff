@@ -1,4 +1,4 @@
-import {Physics, Scene} from 'phaser';
+import {Physics} from 'phaser';
 import Crate from './Crate';
 import CollidesWithObjects from './CollidesWithObjects';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
@@ -32,6 +32,42 @@ export default class Enemy extends CollidesWithObjects {
     public set chasePlayer(value: boolean) {
       this.$chasePlayer = value;
     }
+      private static getClosestPoint(point: Vector2, path: Vector2[]) {
+        let closest = path[0];
+        let closestDistance = Between(point.x, point.y, path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) {
+            const distance = Between(point.x, point.y, path[i].x, path[i].y);
+            if (distance < closestDistance) {
+                closest = path[i];
+                closestDistance = distance;
+            }
+        }
+        return closest;
+    }
+
+    // function that compares the distance between 2 points and a reference point and returns the furthest point
+    private static getFurthestPoint(a: Vector2, b: Vector2, point: Vector2) {
+        // get the distance between the two points
+        const distanceA = point.distance(a);
+        const distanceB = point.distance(b);
+        // return the furthest point
+        return distanceA > distanceB ? b : a;
+    }
+    private static rect2Path(pathRect: Rectangle) {
+        // turn rect into path
+        let path;
+        for (let i = 1; i < 5; i++) {
+            const corner = point2Vec(pathRect.getPoint(0.25 * i));
+
+            if (i === 1) {
+                path = new Path(corner.x, corner.y);
+            } else {
+                path.lineTo(corner.x, corner.y);
+            }
+        }
+        path.closePath();
+        return path;
+    }
     private readonly speed: number = 0;
     private playersCrate: Crate;
     private $chasePlayer: boolean = true;
@@ -56,8 +92,7 @@ export default class Enemy extends CollidesWithObjects {
     constructor(config, gridUnit: number, size: number, scale: number) {
         super(config.scene, config.x, config.y, size, scale);
 
-        const navMesh = config.scene.navMeshPlugin;
-        this.navMesh = navMesh;
+        this.navMesh = config.scene.navMeshPlugin;
         this.scene = config.scene;
         const {x, y} = config;
         const that = this as unknown as ContainerLite;
@@ -122,17 +157,17 @@ export default class Enemy extends CollidesWithObjects {
             const rightX = x + w;
             const bottomY = y + h;
 
-            const polys: Point[] = [{x:leftX, y:topY}, {x:leftX, y:bottomY}, {x:rightX, y:bottomY}, {x:rightX, y:topY}];
-            holeCubes.push(polys);
+            const points: Point[] = [{x: leftX, y: topY}, {x: leftX, y: bottomY}, {x: rightX, y: bottomY}, {x: rightX, y: topY}];
+            holeCubes.push(points);
         });
-        const region: Point[] = [{x:left, y:top}, {x:right, y:top}, {x:right, y:bottom}, {x:left, y:bottom}];
+        const region: Point[] = [{x: left, y: top}, {x: right, y: top}, {x: right, y: bottom}, {x: left, y: bottom}];
         const worldbox = Polygon.fromPoints(region);
         const {bounds: inbounds} = worldbox.toVertices();
         const crateRegions: number[][][] = [];
         const {bounds, holes} = Polygon.fromVertices({bounds: inbounds, holes: holeCubes}).toVertices();
         const mapper = ({x, y}) => [x, y];
-        holes.forEach(hole => crateRegions.push(hole.map(mapper)));
-        bounds.forEach(bound => crateRegions.push(bound.map(mapper)));
+        holes.forEach((hole) => crateRegions.push(hole.map(mapper)));
+        bounds.forEach((bound) => crateRegions.push(bound.map(mapper)));
 
         const partitioned = decompose(crateRegions);
         const polys = partitioned.map ((decomp) => {
@@ -146,7 +181,7 @@ export default class Enemy extends CollidesWithObjects {
                 ];
             },
         );
- 
+
         const navMesh = this.navMesh.buildMeshfromPolygons('mesh', polys);
         // navMesh.enableDebug(); // Creates a Phaser.Graphics overlay on top of the screen
         navMesh.debugDrawClear(); // Clears the overlay
@@ -160,15 +195,9 @@ export default class Enemy extends CollidesWithObjects {
 
         const navPath = navMesh.findPath(point, player);
         navMesh.debugDrawPath(navPath, 0xffd900);
-  
-        if (navPath) {
-            const start = navPath.shift() as Vector2;
-            const path = new Path(start.x, start.y);
-            // tslint:disable-next-line:no-unused-expression
-            navPath?.length > 0 && navPath?.forEach(({x, y}) => {
-                path.lineTo(x, y);
-            });
 
+        if (navPath) {
+            const path = this.convertToPath(navPath);
             this.follow(path);
         }
       }
@@ -328,20 +357,8 @@ export default class Enemy extends CollidesWithObjects {
           this.drawShapes(unubscuredShapes);
           graphics.lineStyle(0, 0);
           }
-      private getClosestPoint(point: Vector2, path: Vector2[]) {
-        let closest = path[0];
-        let closestDistance = Between(point.x, point.y, path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) {
-            const distance = Between(point.x, point.y, path[i].x, path[i].y);
-            if (distance < closestDistance) {
-                closest = path[i];
-                closestDistance = distance;
-            }
-        }
-        return closest;
-    }
 
-    private pushCrateImpl(direction: string, crate: Crate) {
+    private pushCrateImpl(direction: string) {
         this.setBlockedDirection(direction);
         const gameobject = this as unknown as GameObject;
 
@@ -428,46 +445,6 @@ export default class Enemy extends CollidesWithObjects {
             }
         }
     }
-
-    // function that compares the distance between 2 points and a reference point and returns the furthest point
-    private getFurthestPoint(a: Vector2, b: Vector2, point: Vector2) {
-        // get the distance between the two points
-        const distanceA = point.distance(a);
-        const distanceB = point.distance(b);
-        // return the furthest point
-        return distanceA > distanceB ? b : a;
-    }
-    private rect2Path(pathRect: Rectangle) {
-        // turn rect into path
-        let path;
-        for (let i = 1; i < 5; i++) {
-            const corner = point2Vec(pathRect.getPoint(0.25 * i));
-
-            if (i === 1) {
-                path = new Path(corner.x, corner.y);
-            } else {
-                path.lineTo(corner.x, corner.y);
-            }
-        }
-        path.closePath();
-        return path;
-    }
-    private shape2Path(points) {
-        // turn circle into path
-        let path;
-        this.path = path;
-
-        for (let i = 0; i < points.length; i++) {
-            const point = points[i];
-            if (i === 0) {
-                path = new Path(point[0], point[1]);
-            } else {
-                path.lineTo(point[0], point[1]);
-            }
-        }
-        path.closePath();
-        return path;
-    }
     private seek(target: Vector2) {
         // set the velocity to the target
         const gameobject = this as unknown as GameObject;
@@ -479,24 +456,6 @@ export default class Enemy extends CollidesWithObjects {
         const dir = target.clone().subtract(center);
         dir.normalize();
         dir.scale(this.speed);
-        // this.collisionPoint = point2Vec(center);
         body.setVelocity(dir.x, dir.y);
-
     }
-    // private seek(target: Vector2) {
-    //     const { point } = this as unknown as PerspectiveMixinType;
-    //     const desired = target.clone();
-    //     desired.subtract(point);
-    //     desired.normalize();
-    //     const maxSpeed = new Vector2(this.speed, this.speed);
-    //     // // Calculating the desired velocity to target at max speed
-    //     desired.multiply(maxSpeed);
-    //     // Reynolds’s formula for steering force
-    //     const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
-    //     const steer = desired.clone();
-    //     steer.subtract(body.velocity);
-    //     steer.limit(1);
-
-    //     this.acceleration.add(steer);
-    // }
 }
