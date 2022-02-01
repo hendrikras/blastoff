@@ -1,8 +1,9 @@
-import {GameObjects, Physics, Types, Curves} from 'phaser';
+import {GameObjects, Physics, Types} from 'phaser';
 import {
     collidesOnAxes,
     getArcCurve,
     getArcShape,
+    getNavMesh,
     impassable,
     point2Vec,
     setPosition,
@@ -26,7 +27,9 @@ import Shape = Phaser.GameObjects.Shape;
 import GameObject = Phaser.GameObjects.GameObject;
 import Polygon from '../plugins/gpc';
 import { Point } from '../plugins/navmesh/src/common-types';
-import {Triangle} from 'phaser3-rex-plugins/plugins/gameobjects/shape/shapes/geoms';
+import Enemy from './Enemy';
+import Wall from './Wall';
+import Rectangle = Phaser.Geom.Rectangle;
 
 export default class Player extends CollidesWithObjects {
     private speed;
@@ -34,6 +37,7 @@ export default class Player extends CollidesWithObjects {
     private cursorKeys: Types.Input.Keyboard.CursorKeys;
     private pace: number = 30;
     private crates: Crate[];
+    private allCrates: Physics.Arcade.Group;
     private factor: number = (this.pace / 10) * 2.5;
     private worldBounds: ArcadeBodyBounds;
 
@@ -48,14 +52,17 @@ export default class Player extends CollidesWithObjects {
     private pathHelper: Circle;
     private step: number;
     private now: number;
+    private enemy: Enemy;
+    private max: number;
 
     // private scene: Scene;
 
-    constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, scale) {
+    constructor(config, gridUnit: number, crates: Physics.Arcade.Group, size, enemy: Enemy) {
         super(config.scene, config.x, config.y, size, size);
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
         body.setCollideWorldBounds(true);
-
+        this.enemy = enemy;
+        this.allCrates = crates;
         this.scene = config.scene;
         const that = this as unknown as ContainerLite;
         const {x, y} = config;
@@ -94,18 +101,13 @@ export default class Player extends CollidesWithObjects {
         this.cursorKeys = config.scene.input.keyboard.createCursorKeys();
         this.pushCrate = this.pushCrateImpl;
         this.worldBounds = config.scene.physics.world.bounds;
+        const w = this.worldBounds.right - this.worldBounds.x;
+        const h = this.worldBounds.bottom - this.worldBounds.y;
+        this.max = h > w ? h : w;
     }
 
     public isMoving() {
         return this.hasInput;
-    }
-
-    public resetPlayerOnCrate() {
-      if (this.pushedCrate && this.pushedCrate.player) {
-        this.pushedCrate.player = false;
-        this.pushedCrate.enemy = null;
-      }
-      this.pushedCrate = null;
     }
 
     public update() {
@@ -214,6 +216,9 @@ export default class Player extends CollidesWithObjects {
             const b2 = (direction + 0.9) % 1;
             handPos1 = point2Vec(circle.getPoint(a2));
             handPos2 = point2Vec(circle.getPoint(b2));
+        } else {
+            this.pushedCrate = null;
+            this.resetBlockedDirections();
         }
 
         obscuredShapes.push({type: CIRCLE, color: this.color, shape: new Circle(handPos1.x, handPos1.y, this.gridUnit * 0.8), strokeColor: 0x000});
@@ -259,6 +264,7 @@ export default class Player extends CollidesWithObjects {
         path?.curves.length > 0 && unubscuredShapes.push({type: -3, shape: path, color: topBlonde, strokeColor: 0X0866251});
 
         graphics.lineStyle(this.gridUnit / 4, 0x000);
+       
         graphics.fillStyle(this.color, 1);
         graphics.fillStyle(0x9f1f19, 0.7);
         dp(mouthPoint);
@@ -272,7 +278,7 @@ export default class Player extends CollidesWithObjects {
         graphics.lineStyle(0, 0);
     }
     public crateCollider = (me: Player, crate: Crate) => {
-
+        // console.log(true);
       this.pushedCrate = crate;
       if (!crate.player) {
         crate.player = true;
@@ -343,19 +349,26 @@ export default class Player extends CollidesWithObjects {
         const right = direction === 'right';
         const left = direction === 'left';
         const none = false;
+        const blockedDirection = { up, down, right, left, none: false};
+        if (crate instanceof Wall) {
+            this.blockedDirection = blockedDirection;
+            return;
+        }
         const collision: Types.Physics.Arcade.ArcadeBodyCollision = { up, down, right, left, none };
         const axis = up || down ? 'y' : 'x';
-        const selection: Crate[] = this.crates.filter((item: Crate) => collidesOnAxes(crate, item, collision))
+
+        const selection: Crate[] = this.crates
+            .filter((item: Crate) => crate !== item && collidesOnAxes(crate, item, collision, this.max))
             .sort((a: Crate, b: Crate) => a[axis] < b[axis] ? -1 : 1 );
-        const collidingCrate = up || left ? selection.pop() : selection[0];
+        const collidingCrate = up || left ? selection[selection?.length - 1 ] : selection[0];
 
         if (impassable(crate, collidingCrate, this.factor, collision, this.worldBounds)) {
-            this.blockedDirection = { up, down, right, left, none: false};
-            const opAxis = right || left ? 'y' : 'x';
-            this[`${opAxis}Threshold`] = crate[opAxis] / this.gridUnit;
+            this.blockedDirection = blockedDirection;
         } else {
             up || left ? crate[axis] -= this.factor : crate[axis] += this.factor;
+            crate.update();
+            const polys = getNavMesh(this.allCrates, this.scene.physics.world.bounds, this.enemy.getWidth() / 2);
+            this.enemy.updateMesh(polys);
         }
-        crate.update();
     }
 }

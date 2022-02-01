@@ -10,7 +10,7 @@ import {
   Collision4Direction,
   Direction,
   getGameHeight,
-  getGameWidth, getRandomInt, point2Vec,
+  getGameWidth, getNavMesh, getRandomInt, point2Vec,
   reachedBound,
 } from '../helpers';
 import PerspectiveObject, { PerspectiveMixinType } from '../gameobjects/PerspectiveMixin';
@@ -44,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   private gravitySpeed: number;
   private rocketCollider: Phaser.Physics.Arcade.Collider;
   private cratesPreRenderEvent: EventEmitter;
+  private measureLong: number
 
   constructor() {
     super(sceneConfig);
@@ -55,6 +56,7 @@ export class GameScene extends Phaser.Scene {
     const isLandscape: boolean = measureX > measureY;
     const measureShort: number = isLandscape ? measureY : measureX;
     const measureLong: number = measureShort * 1.3;
+    this.measureLong = measureLong;
     this.gridUnit = Math.round(measureShort / 100);
     this.gravitySpeed = this.gridUnit * 2;
     this.data.set('gridUnit', this.gridUnit);
@@ -116,21 +118,26 @@ export class GameScene extends Phaser.Scene {
       w.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
       w.update() ;
     });
-    // for (let i = 0; i < getRandomInt(4); i++) {
-    //   const cube = new CubeType(this, centerY, centerX, quarterCrate * 4, quarterCrate * 4, quarterCrate * 4, 0x43464B, 'cube') as Wall;
-    //   cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
-    //
-    //   this.crates.add(cube);
-    // }
+
+    for (let i = 0; i < getRandomInt(4); i++) {
+      const long = getRandomInt(2) === 0
+      const length = 8;
+      const h = long ? length : 1;
+      const w = long ? 1: length;
+      const cube = new CubeType(this, centerY, centerX, quarterCrate * w, quarterCrate * h, quarterCrate * 4, 0x43464B, 'cube') as Wall;
+      cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
+      this.crates.add(cube);
+    }
 
     this.rocket = this.physics.add.sprite(centerX, top + quarterCrate * 2, 'rocket');
     this.rocket.setScale( this.gridUnit / 15);
     this.rocket.setDepth(1);
 
     this.crates.setDepth(3);
-    this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, quarterCrate, this.gridUnit / 4);
-    this.player.scale = 3;
     this.enemy = new EnemyType({scene: this, x: centerX, y: top + quarterCrate * 2}, this.gridUnit, quarterCrate * 1.2, this.gridUnit / 4);
+    this.player = new PlayerType({scene: this, x: centerX, y: centerY}, this.gridUnit, this.crates, quarterCrate, this.enemy);
+    this.player.scale = 3;
+    
     // @ts-ignore
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
     // @ts-ignore
@@ -145,17 +152,12 @@ export class GameScene extends Phaser.Scene {
     const enemy = this.enemy;
     const player = this.player;
     function placeCrate(crate, crates) {
-      const {width: w, height: h} = crate;
-      const p1 = new Vector2(w, 0);
-      const p2 = new Vector2(0, h);
-      // const rad = p1.distance(p2);
-      // console.log(w, p1.distance(p2), w * 1.5);
       crate.setRandomPosition(startX, startY, width, height);
       crates.children.iterate((item) => {
         if (item !== crate) {
           const pos = point2Vec(item as Vector2);
           const cratePos = point2Vec(crate);
-          const rad = crate.width * 1.5;
+          const rad = quarterCrate * 6;
           if (pos.distance(crate) <= rad || cratePos.distance(enemy) <= rad || cratePos.distance(player) <= rad) {
             placeCrate(crate, crates);
           }
@@ -163,19 +165,15 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    // const array = [[0,1,2], [3,4,5], [6,7,8]];
-    // const map = this.make.tilemap({data: array, tileWidth: this.gridUnit, tileHeight: this.gridUnit});
-    // const layer = map.createLayer(0, 'tiles', 0 , 0);
-
-    // const navMesh = this.navMeshPlugin.buildMeshFromTilemap("mesh", map, [layer]);
     this.crates.children.iterate((crate, idx) => {
       placeCrate(crate, this.crates);
       this.fallingCrates.push(crate as Crate);
-      // const layer = map.createLayer(0, 'crates', 0 , 0);
     });
-    this.enemy.setDataEnabled();
-    // this.enemy.data.set('mesh', decomp);
-    // console.log(decomp);
+
+    const polys = getNavMesh(this.crates, this.physics.world.bounds, quarterCrate * 1.2);
+
+    this.enemy.updateMesh(polys);
+
     this.boundedCrates = [];
     this.updatePerspectiveDrawing();
     this.physics.world.on('worldbounds', (body /*, up, down, left, right*/) => {
@@ -187,7 +185,7 @@ export class GameScene extends Phaser.Scene {
     // set motion on the stars
 
     if (!this.rocket.visible) {
-      // this.enemy.
+
       this.dropEverything();
     }
     this.backgoundInc === 0
@@ -209,7 +207,6 @@ export class GameScene extends Phaser.Scene {
       } else {
         // @ts-ignore
         this.crates.children.iterate((crate: Crate) => {
-          // console.log(time);
           crate.update();
         });
       }
@@ -226,7 +223,6 @@ export class GameScene extends Phaser.Scene {
     this.scene.pause();
   }
   private dropEverything() {
-    // debugger;
     const blockedCrates: Crate[] = [];
     this.fallingCrates.forEach((crate: Crate) => {
 
@@ -234,7 +230,8 @@ export class GameScene extends Phaser.Scene {
 
       const collision: Types.Physics.Arcade.ArcadeBodyCollision = { up: false, down: true, right: false, left: false, none };
       const axis = 'y';
-      const selection = this.fallingCrates.filter((item: Crate) => collidesOnAxes(crate, item, collision))
+      const selection = this.fallingCrates
+          .filter((item: Crate) => crate !== item  && collidesOnAxes(crate, item, collision, this.measureLong))
           .sort((a: Crate, b: Crate) => a[axis] < b[axis] ? -1 : 1 );
       const { bounds } = this.physics.world;
 

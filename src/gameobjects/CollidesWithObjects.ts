@@ -1,4 +1,4 @@
-import {Physics, Types, GameObjects, Curves} from 'phaser';
+import {Physics, Types, GameObjects} from 'phaser';
 import Crate from './Crate';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import {PerspectiveMixinType} from './PerspectiveMixin';
@@ -18,6 +18,9 @@ import RadToDeg = Phaser.Math.RadToDeg;
 import DegToRad = Phaser.Math.DegToRad;
 import SphereClass from './Sphere';
 import {Point} from '../plugins/navmesh/src/common-types';
+import Rectangle = Phaser.Geom.Rectangle;
+import LineToLine = Phaser.Geom.Intersects.LineToLine;
+
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
@@ -37,21 +40,32 @@ export default class CollidesWithObjects extends ContainerLite {
         return this.blockedDirection[direction];
     }
     public pushCrate = (dir: string, crate: Crate) => console.error('not implemented!');
-    protected resetBlockedDirections = (crate) => {
-        unblockBut(Direction[this.facingSide(crate)], this.blockedDirection);
+    protected resetBlockedDirections = (crate?: Crate) => {
+        if (crate) {
+            unblockBut(Direction[this.facingSide(crate)], this.blockedDirection);
+        } else {
+            this.blockedDirection = {up: false, left: false, right: false, down: false, none: true };
+        }
     }
     protected facingSide(crate: Crate) {
-        const { point } = this as unknown as PerspectiveMixinType;
-        const angle = BetweenPoints(crate, point);
-        if (angle > 0.78 && angle < 2.29 ) {
-            return Direction.up;
-        } else if (angle > -2.29 && angle < -0.78 ) {
-           return Direction.down;
-        } else if (angle > -0.79 && angle < 0.78 ) {
-            return Direction.left;
-        } else {
-           return Direction.right;
-        }
+        const { point: {x, y} } = this as unknown as PerspectiveMixinType;
+        const rect = new Rectangle(x - crate.width / 2, y - crate.height / 2, crate.width, crate.height);
+        const right = rect.getLineA();
+        const top = rect.getLineB();
+        const left = rect.getLineC();
+        const bottom = rect.getLineD();
+
+        const directions = [bottom, left, top, right];
+        const directionStrings = ['left', 'down', 'right', 'up'];
+        const line = new Line(x, y, crate.x, crate.y);
+        let closest;
+        directions.forEach((dir, idx) => {
+            if (LineToLine(line, dir)) {
+                    closest = idx;
+                    return;
+            }
+        });
+        return Direction[directionStrings[closest]];
     }
     protected handleCrateCollison = (crate: Crate) => {
        this.pushCrate(Direction[this.facingSide(crate)], crate);
@@ -70,7 +84,6 @@ export default class CollidesWithObjects extends ContainerLite {
         }
 
         const tp = this.getExternalTangent(circle1, circle2, cross);
-        // const tp2 = findExternalTangents(circle2, circle1, cross);
 
         if (tp?.length > 0 && cross) {
             const [p1, p2, p3, p4] = tp;

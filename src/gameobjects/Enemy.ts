@@ -4,7 +4,7 @@ import CollidesWithObjects from './CollidesWithObjects';
 import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import PerspectiveObject, {PerspectiveMixinType} from './PerspectiveMixin';
 import SphereClass from './Sphere';
-import {Direction, point2Vec, setPosition, ShapeCollectionItem} from '../helpers';
+import {Direction, point2Vec, setPosition, ShapeCollectionItem, getNavMesh, mapPointsToArray} from '../helpers';
 import BetweenPoints = Phaser.Math.Angle.BetweenPoints;
 import Normalize = Phaser.Math.Angle.Normalize;
 import Vector2 = Phaser.Math.Vector2;
@@ -16,14 +16,11 @@ import CIRCLE = Phaser.Geom.CIRCLE;
 import LINE = Phaser.Geom.LINE;
 import GameObject = Phaser.GameObjects.GameObject;
 import Rectangle = Phaser.Geom.Rectangle;
-import decompose from 'rectangle-decomposition';
+
+import smooth from 'smooth-polyline';
 
 import Between = Phaser.Math.Distance.Between;
 import Path = Phaser.Curves.Path;
-// import NavMesh from '../plugins/phaser-navmesh/src/phaser-navmesh'
-
-import {Point} from '../plugins/navmesh/src/common-types';
-import { Polygon} from '../plugins/gpc';
 
 export default class Enemy extends CollidesWithObjects {
     public get chasePlayer() {
@@ -88,6 +85,7 @@ export default class Enemy extends CollidesWithObjects {
     // private scene: Scene;
     private reverse = false;
     private navMesh: any;
+    private mesh: any;
 
     constructor(config, gridUnit: number, size: number, scale: number) {
         super(config.scene, config.x, config.y, size, scale);
@@ -129,6 +127,24 @@ export default class Enemy extends CollidesWithObjects {
     public clearMesh() {
         this.navMesh.destroy();
     }
+    public getWidth(){
+        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        return body.width;
+    }
+    public updateMesh(polys){
+        // const polys = getNavMesh(crates, this.scene.physics.world.bounds, body.width);
+        const navMesh = this.navMesh.buildMeshfromPolygons('mesh', polys);
+        // navMesh.enableDebug(); // Creates a Phaser.Graphics overlay on top of the screen
+        navMesh.debugDrawClear(); // Clears the overlay
+        // Visualize the underlying navmesh
+        navMesh.debugDrawMesh({
+          drawCentroid: false,
+          drawBounds: false,
+          drawNeighbors: false,
+          drawPortals: false,
+        });
+        this.mesh = navMesh;
+    }
     public exterminate(player: Vector2, crates) {
         const {point} = this as unknown as PerspectiveMixinType;
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
@@ -142,63 +158,24 @@ export default class Enemy extends CollidesWithObjects {
         //     };
         //         const result = (tree as any).search(bbox).filter((item) => item.crate !== crate);
 
-        const {left, top, bottom, right} = this.scene.physics.world.bounds;
-        const holeCubes: Point[][] = [];
+        let navPath = this.mesh.findPath(point, player);
+        if (!navPath){
+            const polys = getNavMesh(crates, this.scene.physics.world.bounds, body.width / 2);
+            this.updateMesh(polys);
+            navPath = this.mesh.findPath(point, player);
+        }
 
-        crates.children.iterate((crate: Crate) => {
-            const crateBody = ((crate as unknown as GameObject).body as Physics.Arcade.Body);
-            const div = body.width / 2;
-            const w = (crateBody.width / 2) + div;
-            const h = (crateBody.height / 2) + div;
-            const {x, y} = crate as unknown as Point;
-
-            const leftX = x - w;
-            const topY = y - h;
-            const rightX = x + w;
-            const bottomY = y + h;
-
-            const points: Point[] = [{x: leftX, y: topY}, {x: leftX, y: bottomY}, {x: rightX, y: bottomY}, {x: rightX, y: topY}];
-            holeCubes.push(points);
-        });
-        const region: Point[] = [{x: left, y: top}, {x: right, y: top}, {x: right, y: bottom}, {x: left, y: bottom}];
-        const worldbox = Polygon.fromPoints(region);
-        const {bounds: inbounds} = worldbox.toVertices();
-        const crateRegions: number[][][] = [];
-        const {bounds, holes} = Polygon.fromVertices({bounds: inbounds, holes: holeCubes}).toVertices();
-        const mapper = ({x, y}) => [x, y];
-        holes.forEach((hole) => crateRegions.push(hole.map(mapper)));
-        bounds.forEach((bound) => crateRegions.push(bound.map(mapper)));
-
-        const partitioned = decompose(crateRegions);
-        const polys = partitioned.map ((decomp) => {
-                const topLeft = new Vector2(decomp[0][0], decomp[0][1]);
-                const bottomRight = new Vector2(decomp[1][0], decomp[1][1]);
-                return [
-                    { x: topLeft.x, y: topLeft.y },
-                    { x: bottomRight.x, y: topLeft.y },
-                    { x: bottomRight.x, y: bottomRight.y },
-                    { x: topLeft.x, y: bottomRight.y },
-                ];
-            },
-        );
-
-        const navMesh = this.navMesh.buildMeshfromPolygons('mesh', polys);
-        // navMesh.enableDebug(); // Creates a Phaser.Graphics overlay on top of the screen
-        navMesh.debugDrawClear(); // Clears the overlay
-        // Visualize the underlying navmesh
-        navMesh.debugDrawMesh({
-          drawCentroid: false,
-          drawBounds: false,
-          drawNeighbors: false,
-          drawPortals: false,
-        });
-
-        const navPath = navMesh.findPath(point, player);
-        navMesh.debugDrawPath(navPath, 0xffd900);
+        // navMesh.debugDrawPath(navPath, 0xffd900);
 
         if (navPath) {
-            const path = this.convertToPath(navPath);
-            this.follow(path);
+
+            // const path = ;
+            // const newPath = smooth(smooth(navPath.map(mapPointsToArray))).map((arr) => ({x: arr[0], y: arr[1]}));
+
+            // console.log(navPath, newPath);   
+            this.convertToPath(navPath);
+            // this.follow(this.path);
+            this.moveAlong(navPath);
         }
       }
       public cratesOverlap = (me: Enemy, crate: Crate) => {
@@ -382,69 +359,16 @@ export default class Enemy extends CollidesWithObjects {
                 body.setVelocity(0);
         }
     }
-    private getSide(crate, pathRect) {
-        const side = this.facingSide(crate);
-        switch (side) {
-        case Direction.up:
-            return pathRect.getLineC();
-        case Direction.right:
-            return pathRect.getLineD();
-        case Direction.down:
-            return pathRect.getLineA();
-        default:
-            return pathRect.getLineB();
-        }
-    }
-    private follow(path: Path) {
-        // this.path = path;
-        const { point } = this as unknown as PerspectiveMixinType;
-        const getCurveLengths =  path.getCurveLengths();
-        const lng = getCurveLengths[0];
-        const totalLength = getCurveLengths[getCurveLengths.length - 1];
-        let worldRecord = Infinity;
-        let closestPoint;
-        const getDelta = () => this.reverse ? -0.02 : 0.01;
+    moveAlong(path: Phaser.Math.Vector2[])
+	{
+		if (!path || path.length <= 0)
+		{
+			return
+		}
 
-        for (let i = 0; i < path.curves.length; i++) {
-            // get line from curve
-
-            const curve = path.curves[i];
-            const start = curve.getStartPoint();
-            const end = curve.getEndPoint();
-            const distance = point.distance(start);
-            if (distance < worldRecord) {
-                worldRecord = distance;
-                closestPoint = start;
-            }
-            const line = new Line(start.x, start.y, end.x, end.y);
-
-            if (Phaser.Geom.Intersects.PointToLine(point, line, this.gridUnit * 1.25)) {
-            // get the percentage of the line based on the point
-            const percentage = ((i * lng) + Between(point.x, point.y, start.x, start.y)) / totalLength;
-
-            if (this.reverse ? i > 0 :  i < path.curves.length - 1) {
-                    const target = path.getPoint(percentage + getDelta());
-                    this.seek(target);
-                    break;
-
-                } else {
-                    // check if we reached the end of the path
-                    if (percentage > 0.96) {
-                        this.reverse = true;
-                    }
-                    if (percentage < 0.04) {
-                        this.reverse = false;
-                    }
-                    const target = path.getPoint(percentage + getDelta());
-                    this.seek(target);
-                    break;
-                }
-            } else {
-                // seek the closest point on the path
-               this.seek(closestPoint);
-            }
-        }
-    }
+		const movePath = path;
+		this.seek(point2Vec(movePath.shift()!))
+	}
     private seek(target: Vector2) {
         // set the velocity to the target
         const gameobject = this as unknown as GameObject;
