@@ -14,6 +14,11 @@ import FACING_RIGHT = Phaser.Physics.Arcade.FACING_RIGHT;
 import FACING_NONE = Phaser.Physics.Arcade.FACING_NONE;
 import { Point } from './plugins/navmesh/src/common-types';
 import Normalize = Phaser.Math.Angle.Normalize;
+import Polygon from './plugins/gpc';
+import decompose from 'rectangle-decomposition';
+import GameObject = Phaser.GameObjects.GameObject;
+import Rectangle = Phaser.Geom.Rectangle;
+import RectangleToRectangle = Phaser.Geom.Intersects.RectangleToRectangle;
 
 export interface ShapeCollectionItem {
     type: number;
@@ -37,25 +42,10 @@ export const getGameWidth = (scene: Phaser.Scene) => {
 export const getGameHeight = (scene: Phaser.Scene) => {
     return scene.game.scale.height;
   };
-export const collidesOnAxes = (crate: Crate, item: Crate, direction: ArcadeBodyCollision): boolean => {
-  const axis = direction.up || direction.down ? 'x' : 'y';
-  const opaxis = direction.up || direction.down ? 'y' : 'x';
-  const halfSize = crate.body.height / 2;
-  // the following var names are presuming direction in y axis. Could make it more general,
-  // as this function is used on the x axis too. but this is already confusing as is.
-  const leftCornerItem = item[axis] - halfSize;
-  const rightCornerItem = item[axis] + halfSize;
-  // reminder: change halfsize into halfwidth/ height if the item is not square.
-  const leftCornerCrate = crate[axis] - halfSize;
-  const rightCornerCrate = crate[axis] + halfSize;
-  const upLeftCondition = item[opaxis] + halfSize <= crate[opaxis] - halfSize;
-  const downRightCondition = item[opaxis] - halfSize >= crate[opaxis] + halfSize;
-  return item !== crate
-  && (direction.up || direction.left ? upLeftCondition : downRightCondition)
-  && (
-    (leftCornerItem <= rightCornerCrate && leftCornerItem >= leftCornerCrate )
-    || (rightCornerItem <= rightCornerCrate && rightCornerItem >= leftCornerCrate )
-  );
+export const collidesOnAxes = (crate: Crate, item: Crate, direction: ArcadeBodyCollision, max: number): boolean => {
+    const extended = new Rectangle(direction.left? 0 :crate.body.left, direction.up ? 0 : crate.body.top, direction.right ? max : direction.left ? crate.body.right : crate.body.width, direction.down? max : direction.up ? crate.body.bottom: crate.body.height); 
+    const collides = new Rectangle(item.body.left, item.body.top, item.body.width, item.body.height);
+    return RectangleToRectangle(extended, collides);
 };
 export const Collision4Direction = (dir: Direction) => ({none: dir === Direction.none, up: dir === Direction.up, down: dir === Direction.down, left: dir === Direction.left, right: dir === Direction.right });
 export const impassable = (crate: Crate, otherCrate: Crate | undefined, speed: number, direction: ArcadeBodyCollision, world: ArcadeBodyBounds): boolean =>
@@ -66,11 +56,9 @@ export const blockedInDirection = (crate: Crate, otherCrate: Crate | undefined, 
     return true;
   }
   if (otherCrate) {
-  const halfSize = crate.body.height / 2;
-  const axis = direction.up || direction.down ? 'y' : 'x';
-  const upLeftCondition = otherCrate[axis] + halfSize >= crate[axis] - halfSize - speed;
-  const downRightCondition = otherCrate[axis]  - halfSize <= crate[axis] + halfSize + speed;
-  return direction.up || direction.left ? upLeftCondition : downRightCondition;
+      const box = new Rectangle(crate.body.left - speed, crate.body.top - speed, crate.body.width + speed, crate.body.height + speed);
+      const otherBox = new Rectangle(otherCrate.body.left - speed, otherCrate.body.top - speed, otherCrate.body.width + speed, otherCrate.body.height + speed);
+      return RectangleToRectangle(box, otherBox);
   } else {
     return false;
   }
@@ -242,39 +230,46 @@ export function getAngle(circle1: Geom.Circle, circle2: Geom.Circle) {
     return Phaser.Math.Angle.Normalize(Phaser.Math. Angle.BetweenPoints(v1, v2)) / Math.PI * 2;
 }
 
-// Check if rectangle a contains rectangle b
-// Each object (a and b) should have 2 properties to represent the
-// top-left corner (x1, y1) and 2 for the bottom-right corner (x2, y2).
-export function contains(a, b) {
-    return !(
-        b.x1 < a.x1 ||
-        b.y1 < a.y1 ||
-        b.x2 > a.x2 ||
-        b.y2 > a.y2
+export const mapPointsToArray = ({x, y}) => [x, y];
+
+export function getNavMesh(crates, worldbounds, div) {
+    const {left, top, bottom, right} = worldbounds;
+    const holeCubes: Point[][] = [];
+
+    crates.children.iterate((crate: Crate) => {
+        const crateBody = ((crate as unknown as GameObject).body as Phaser.Physics.Arcade.Body);
+        // const div = body.width / 2;
+        const w = (crateBody.width / 2) + div;
+        const h = (crateBody.height / 2) + div;
+        const {x, y} = crate as unknown as Point;
+
+        const leftX = x - w;
+        const topY = y - h;
+        const rightX = x + w;
+        const bottomY = y + h;
+
+        const points: Point[] = [{x: leftX, y: topY}, {x: leftX, y: bottomY}, {x: rightX, y: bottomY}, {x: rightX, y: topY}];
+        holeCubes.push(points);
+    });
+    const region: Point[] = [{x: left, y: top}, {x: right, y: top}, {x: right, y: bottom}, {x: left, y: bottom}];
+    const worldbox = Polygon.fromPoints(region);
+    const {bounds: inbounds} = worldbox.toVertices();
+    const crateRegions: number[][][] = [];
+    const {bounds, holes} = Polygon.fromVertices({bounds: inbounds, holes: holeCubes}).toVertices();
+
+    holes.forEach((hole) => crateRegions.push(hole.map(mapPointsToArray)));
+    bounds.forEach((bound) => crateRegions.push(bound.map(mapPointsToArray)));
+
+    const partitioned = decompose(crateRegions);
+    return partitioned.map ((decomp) => {
+            const topLeft = new Vector2(decomp[0][0], decomp[0][1]);
+            const bottomRight = new Vector2(decomp[1][0], decomp[1][1]);
+            return [
+                { x: topLeft.x, y: topLeft.y },
+                { x: bottomRight.x, y: topLeft.y },
+                { x: bottomRight.x, y: bottomRight.y },
+                { x: topLeft.x, y: bottomRight.y },
+            ];
+        },
     );
 }
-
-// Check if rectangle a overlaps rectangle b
-// Each object (a and b) should have 2 properties to represent the
-// top-left corner (x1, y1) and 2 for the bottom-right corner (x2, y2).
-export function overlaps(a, b) {
-    // no horizontal overlap
-    if (a.x1 >= b.x2 || b.x1 >= a.x2) { return false; }
-    // no vertical overlap
-    return !(a.y1 >= b.y2 || b.y1 >= a.y2);
-}
-
-// Check if rectangle a touches rectangle b
-// Each object (a and b) should have 2 properties to represent the
-// top-left corner (x1, y1) and 2 for the bottom-right corner (x2, y2).
-export function touches(a, b) {
-    // has horizontal gap
-    if (a.x1 > b.x2 || b.x1 > a.x2) { return false; }
-
-    // has vertical gap
-    return !(a.y1 > b.y2 || b.y1 > a.y2);
-}
-
-type XY = 0|1;
-export const overlap = ([topLeft, bottomRight], [topLeft2, bottomRight2], xy: XY = 0) =>
-    !(topLeft[xy] >= bottomRight2[xy] || topLeft2[xy] >= bottomRight[xy]);

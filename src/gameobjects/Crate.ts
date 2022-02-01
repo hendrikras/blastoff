@@ -1,8 +1,7 @@
 import { Physics, Math as PMath, Scene } from 'phaser';
 import Enemy from './Enemy';
 import {PerspectiveMixinType} from './PerspectiveMixin';
-import {Direction} from '../helpers';
-import Vector2 = Phaser.Math.Vector2;
+
 import GameObject = Phaser.GameObjects.GameObject;
 
 class Crate extends Physics.Arcade.Sprite {

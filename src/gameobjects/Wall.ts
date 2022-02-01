@@ -1,4 +1,4 @@
-import {Scene} from 'phaser';
+import {Scene, Physics, GameObjects} from 'phaser';
 import {Direction, Collision4Direction} from '../helpers';
 import ArcadeBodyCollision = Phaser.Types.Physics.Arcade.ArcadeBodyCollision;
 import {PerspectiveMixinType} from './PerspectiveMixin';
@@ -13,7 +13,9 @@ class Wall extends Phaser.GameObjects.Rectangle {
   constructor(scene: Scene, x: number , y: number, w: number, h: number, d, color: number, key = 'wall', direction: ArcadeBodyCollision = Collision4Direction(Direction.none)) {
        super(scene, x, y, w, h, color);
        scene.add.existing(this);
-       // scene.physics.add.existing(this);
+       scene.physics.add.existing(this);
+       const body = ((this as unknown as GameObjects.GameObject).body as Physics.Arcade.Body);
+       body.onWorldBounds = true;
        this.color = color;
        this.depth = 1;
        this.key = key;
