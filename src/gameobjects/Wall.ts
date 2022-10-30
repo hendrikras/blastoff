@@ -14,7 +14,9 @@ class Wall extends Phaser.GameObjects.Rectangle {
        super(scene, x, y, w, h, color);
        scene.add.existing(this);
        scene.physics.add.existing(this);
+      
        const body = ((this as unknown as GameObjects.GameObject).body as Physics.Arcade.Body);
+       body.pushable = false;
        body.onWorldBounds = true;
        this.color = color;
        this.depth = 1;

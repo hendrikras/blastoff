@@ -43,7 +43,7 @@ export const getGameHeight = (scene: Phaser.Scene) => {
     return scene.game.scale.height;
   };
 export const collidesOnAxes = (crate: Crate, item: Crate, direction: ArcadeBodyCollision, max: number): boolean => {
-    const extended = new Rectangle(direction.left? 0 :crate.body.left, direction.up ? 0 : crate.body.top, direction.right ? max : direction.left ? crate.body.right : crate.body.width, direction.down? max : direction.up ? crate.body.bottom: crate.body.height); 
+    const extended = new Rectangle(direction.left ? 0 : crate.body.left, direction.up ? 0 : crate.body.top, direction.right ? max : direction.left ? crate.body.right : crate.body.width, direction.down ? max : direction.up ? crate.body.bottom : crate.body.height);
     const collides = new Rectangle(item.body.left, item.body.top, item.body.width, item.body.height);
     return RectangleToRectangle(extended, collides);
 };
@@ -114,7 +114,6 @@ export function calculateCircleCenter(A, B, C) {
     const x = (aSlope * bSlope * (A.y - C.y) + bSlope * (A.x + B.x) - aSlope * (B.x + C.x) ) / (2 * (bSlope - aSlope) );
     const y = -1 * (x - (A.x + B.x) / 2) / aSlope +  (A.y + B.y) / 2;
     return new Vector2(x, y);
-
 }
 
 export function setPosition(target: Point, position: Point) {

@@ -91,7 +91,7 @@ export default class Enemy extends CollidesWithObjects {
         super(config.scene, config.x, config.y, size, scale);
 
         this.navMesh = config.scene.navMeshPlugin;
-        this.scene = config.scene;
+        (this as unknown as GameObject).scene = config.scene;
         const {x, y} = config;
         const that = this as unknown as ContainerLite;
         // that.body.setCollideWorldBounds(true);
@@ -127,11 +127,11 @@ export default class Enemy extends CollidesWithObjects {
     public clearMesh() {
         this.navMesh.destroy();
     }
-    public getWidth(){
+    public getWidth() {
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
         return body.width;
     }
-    public updateMesh(polys){
+    public updateMesh(polys) {
         // const polys = getNavMesh(crates, this.scene.physics.world.bounds, body.width);
         const navMesh = this.navMesh.buildMeshfromPolygons('mesh', polys);
         // navMesh.enableDebug(); // Creates a Phaser.Graphics overlay on top of the screen
@@ -159,8 +159,8 @@ export default class Enemy extends CollidesWithObjects {
         //         const result = (tree as any).search(bbox).filter((item) => item.crate !== crate);
 
         let navPath = this.mesh.findPath(point, player);
-        if (!navPath){
-            const polys = getNavMesh(crates, this.scene.physics.world.bounds, body.width / 2);
+        if (!navPath) {
+            const polys = getNavMesh(crates, (this as unknown as GameObject).scene.physics.world.bounds, body.width / 2);
             this.updateMesh(polys);
             navPath = this.mesh.findPath(point, player);
         }
@@ -172,7 +172,7 @@ export default class Enemy extends CollidesWithObjects {
             // const path = ;
             // const newPath = smooth(smooth(navPath.map(mapPointsToArray))).map((arr) => ({x: arr[0], y: arr[1]}));
 
-            // console.log(navPath, newPath);   
+            // console.log(navPath, newPath);
             this.convertToPath(navPath);
             // this.follow(this.path);
             this.moveAlong(navPath);
@@ -334,6 +334,14 @@ export default class Enemy extends CollidesWithObjects {
           this.drawShapes(unubscuredShapes);
           graphics.lineStyle(0, 0);
           }
+    public moveAlong(path: Phaser.Math.Vector2[]) {
+    if (!path || path.length <= 0) {
+        return;
+    }
+
+    const movePath = path;
+    this.seek(point2Vec(movePath.shift()!));
+    }
 
     private pushCrateImpl(direction: string) {
         this.setBlockedDirection(direction);
@@ -359,16 +367,6 @@ export default class Enemy extends CollidesWithObjects {
                 body.setVelocity(0);
         }
     }
-    moveAlong(path: Phaser.Math.Vector2[])
-	{
-		if (!path || path.length <= 0)
-		{
-			return
-		}
-
-		const movePath = path;
-		this.seek(point2Vec(movePath.shift()!))
-	}
     private seek(target: Vector2) {
         // set the velocity to the target
         const gameobject = this as unknown as GameObject;
