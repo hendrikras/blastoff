@@ -7,12 +7,18 @@ interface Ref { idx1: number; idx2: number; mp: Vector2; }
 
 export default <TBase extends Constructor>(Base: TBase) =>
 class extends Base {
-    get centerBottom(): Phaser.Math.Vector2 {
 
-        if (!this.vertices[9]) {
-            this.vertices[9] = this.calcVertexPos(3).lerp(this.calcVertexPos(4), 0.5);
-        }
-        return this.vertices[9];
+    get centerDown(): Phaser.Math.Vector2 {
+        return this.centerPointsFace(1, 3, 8);
+    }
+    get centerBottom(): Phaser.Math.Vector2 {
+        return this.centerPointsFace(3, 4, 9);
+    }
+    get centerUp(): Phaser.Math.Vector2 {
+        return this.centerPointsFace(4, 6, 8);
+    }
+    get point7(): Phaser.Math.Vector2 {
+        return this.calcVertexPos(7);
     }
 
     get centerCenter(): Phaser.Math.Vector2 {
@@ -21,10 +27,11 @@ class extends Base {
         }
         return this.vertices[8.5];
     }
+  public color: number;
+  public key;
 
   private graphics;
   private vanishPoint: Vector2;
-  public color: number;
   private gridUnit: number;
   private MeasurePointY1: PMath.Vector2;
   private MeasurePointY2: PMath.Vector2;
@@ -33,7 +40,6 @@ class extends Base {
   private vertices: Vector2[];
   private dimensions: PMath.Vector2;
   private point: PMath.Vector2;
-  public key;
   private intersectMap: Ref[];
 
     constructor(...args: any[]) {
@@ -89,6 +95,7 @@ class extends Base {
        delete this.vertices[3];
        delete this.vertices[4];
        delete this.vertices[7];
+       delete this.vertices[8];
        delete this.vertices[8.5]; // center
        delete this.vertices[9];
    }
@@ -98,6 +105,13 @@ class extends Base {
     }
 
     public dp = (p: Vector2) => (this as unknown as PerspectiveMixinType).graphics.fillPoint(p.x, p.y, this.gridUnit / 2);
+    private centerPointsFace(a, b, newN, lerp = 0.5): Phaser.Math.Vector2 {
+
+        if (!this.vertices[newN]) {
+            this.vertices[newN] = this.calcVertexPos(a).lerp(this.calcVertexPos(b), lerp);
+        }
+        return this.vertices[newN];
+    }
 
     private calcVertexPos(num) {
         const {vertices: v, vanishPoint, intersectMap} = this;
@@ -181,6 +195,9 @@ export interface PerspectiveMixinType  {
     point: PMath.Vector2;
     centerBottom: PMath.Vector2;
     centerCenter: PMath.Vector2;
+    centerUp: PMath.Vector2;
+    centerDown: PMath.Vector2;
+    point7: PMath.Vector2;
     graphics: Graphics;
     draw: () => void;
     pastCenter: (a: string) => boolean;

@@ -20,28 +20,54 @@ import SphereClass from './Sphere';
 import {Point} from '../plugins/navmesh/src/common-types';
 import Rectangle = Phaser.Geom.Rectangle;
 import LineToLine = Phaser.Geom.Intersects.LineToLine;
+import GameObject = Phaser.GameObjects.GameObject;
 
+type BodyCollision = Types.Physics.Arcade.ArcadeBodyCollision;
 
 export default class CollidesWithObjects extends ContainerLite {
     protected distanceToBoxCorner: number;
     protected pushedCrate: Crate | null;
     protected gridUnit: number;
-    protected blockedDirection: Types.Physics.Arcade.ArcadeBodyCollision = { up: false, down: false, right: false, left: false, none: true };
+    protected blockedDirection: BodyCollision = { up: false, down: false, right: false, left: false, none: true };
     protected lastDirection: number;
     protected head: SphereClass;
+    protected gForce: BodyCollision;
+    protected onPlatform?: GameObject | boolean;
+    set falling(falling: BodyCollision) {
+        this.gForce = falling;
+    }
+    get falling() {
+        return this.gForce;
+    }
+    get surface() {
+        return this.onPlatform;
+    }
+    set surface(platform) {
+        this.onPlatform = platform;
+    }
 
     constructor(scene, x: number, y: number, size: number, scale: number) {
         super(scene, x, y, size, size);
         scene.add.existing(this);
         scene.physics.world.enable(this);
         this.lastDirection = Math.PI / 2;
+        this.gForce = {none: true} as BodyCollision;
     }
     public isBlockedDirection(direction: string) {
         return this.blockedDirection[direction];
     }
     public pushCrate = (dir: string, crate: Crate) => console.error('not implemented!');
+    public setFalling(falling: BodyCollision) {
+        this.gForce = falling;
+        if (this.surface === undefined) {
+            this.surface = false;
+        }
+    }
     protected resetBlockedDirections = (crate?: Crate) => {
         if (crate) {
+            if (this.surface === false) {
+                this.surface = crate;
+            }
             unblockBut(Direction[this.facingSide(crate)], this.blockedDirection);
         } else {
             this.blockedDirection = {up: false, left: false, right: false, down: false, none: true };
