@@ -1,6 +1,9 @@
+'use strict';
+
 const path = require('path');
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+
 
 module.exports = {
   entry: {
@@ -13,12 +16,12 @@ module.exports = {
       {
         test: /\.tsx?$/,
         use: 'ts-loader',
-        exclude: /node_modules/
-      }
+        exclude: path.resolve(__dirname, '/node_modules')
+    }
     ]
   },
-
-  devtool: 'inline-source-map',
+  //ToDo: off for PRD
+  devtool: 'source-map',
 
   resolve: {
     extensions: [ '.ts', '.tsx', '.js' ]

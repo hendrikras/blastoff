@@ -48,8 +48,9 @@ export class BootScene extends Phaser.Scene {
 
       this.scene.start('MainMenu');
     });
-
     this.loadAssets();
+
+    // this.load.plugin('rexcontainerliteplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexcontainerliteplugin.min.js', true);
   }
 
   /**
@@ -58,10 +59,17 @@ export class BootScene extends Phaser.Scene {
    * is currently active, so they can be accessed anywhere.
    */
   private loadAssets() {
-    // Load sample assets
+    this.load.image('prison', 'assets/prison.svg');
+    this.load.image('rocket', 'assets/rocket.svg');
+    this.load.image('tile', 'assets/parkay-floor.svg');
+    this.load.image('stars', 'assets/stars.svg');
+    this.load.image('hair', 'assets/hair.svg');
+    this.load.image('sick', 'assets/sick.svg');
+    this.load.image('neutral', 'assets/neutral.svg');
+    this.load.image('torso', 'assets/torso.svg');
 
-    // Source: Open Game Art
-    this.load.image('man', 'assets/character.png');
+    this.load.spritesheet('crates', 'assets/Crates.svg', { frameWidth: 105, frameHeight: 105 });
+    this.load.spritesheet('expressions', 'assets/expressions.svg', { frameWidth: 308, frameHeight: 251 });
   }
 
 }

@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "sourceMap": true,
-    "plugins": [
-      {
-        "name": "typescript-tslint-plugin",
-        "alwaysShowRuleFailuresAsWarnings": false,
-        "ignoreDefinitionFiles": false,
-      }
-    ]
+    "target": "ES2015",
+    "module": "ES2015",
+
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "allowJs": true,
+    "allowUnreachableCode": false,
+    "noImplicitAny": false,
+    "sourceMap": false,
+    "strictPropertyInitialization": false,
+
+    "moduleResolution": "node",
+    "lib": ["dom", "esnext", "es2017", "es2016", "es2015", "es5"],
   },
-  "include": [
-    "**/*.ts"
-  ],
 }

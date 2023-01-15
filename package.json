@@ -1,9 +1,9 @@
 {
-  "name": "sample-phaser3-typescript-project",
+  "name": "everythings-crate",
   "version": "1.0.0",
-  "description": "A sample project using Phaser 3 and TypeScript",
+  "description": "A project using Phaser 3 and TypeScript",
   "main": "src/main.ts",
-  "author": "Joe Bustamante",
+  "author": "Hendrik Ras",
   "license": "MIT",
   "private": false,
   "scripts": {
@@ -11,7 +11,12 @@
     "dev": "webpack-dev-server"
   },
   "dependencies": {
-    "phaser": "^3.20.1"
+    "@pinkkis/phaser-plugin-pasuuna": "^0.5.3",
+    "javascript-astar": "^0.4.1",
+    "phaser": "^3.55.2",
+    "phaser3-rex-plugins": "^1.1.75",
+    "rectangle-decomposition": "^1.0.0",
+    "smooth-polyline": "^1.0.8"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^4.6.0",
