@@ -1,7 +1,6 @@
 import {Physics} from 'phaser';
 import Crate from './Crate';
-import CollidesWithObjects from './CollidesWithObjects';
-import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
+import CollidesWithObjects, { SphereType } from './CollidesWithObjects';
 import PerspectiveObject, {PerspectiveMixinType} from './PerspectiveMixin';
 import SphereClass from './Sphere';
 import {Direction, point2Vec, setPosition, ShapeCollectionItem, getNavMesh, mapPointsToArray} from '../helpers';
@@ -17,7 +16,7 @@ import LINE = Phaser.Geom.LINE;
 import GameObject = Phaser.GameObjects.GameObject;
 import Rectangle = Phaser.Geom.Rectangle;
 
-import smooth from 'smooth-polyline';
+// import smooth from 'smooth-polyline';
 
 import Between = Phaser.Math.Distance.Between;
 import Path = Phaser.Curves.Path;
@@ -71,7 +70,7 @@ export default class Enemy extends CollidesWithObjects {
     private blankEnemy: Enemy;
     private center: Circle;
     private shadow: Circle;
-    private color: number;
+    public color: number;
     private size: number;
     private pathHelper: Circle;
     private collisionPoint: Vector2;
@@ -93,7 +92,6 @@ export default class Enemy extends CollidesWithObjects {
         this.navMesh = config.scene.navMeshPlugin;
         (this as unknown as GameObject).scene = config.scene;
         const {x, y} = config;
-        const that = this as unknown as ContainerLite;
         // that.body.setCollideWorldBounds(true);
         const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
         body.setCollideWorldBounds(true);
@@ -105,17 +103,17 @@ export default class Enemy extends CollidesWithObjects {
         this.size = size;
         this.worldBounds = config.scene.physics.world.bounds;
 
-        this.shadow = config.scene.add.circle(x, y, size / 3.5, shadowColor, 0.4);
+        this.shadow = config.scene.add.circle(x, y, size / 2.5, shadowColor, 0.4);
 
-        that.add(this.shadow as unknown as GameObject);
+        this.add(this.shadow as unknown as GameObject);
         this.center = new Circle(x, y, size * 1.2);
         this.pathHelper = new Circle(x, y, size);
 
         const Sphere = PerspectiveObject(SphereClass);
         const quarter = size * 2;
-        this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color);
+        this.head = new Sphere(config.scene, x, y, quarter, quarter, quarter,  this.color) as unknown as SphereType;
         this.head.setDepth(2);
-        that.setScale(scale, scale);
+        this.setScale(scale, scale);
         this.speed = gridUnit * 20;
         this.gridUnit = gridUnit / 10;
         this.acceleration = new Vector2(0, 0);
@@ -146,8 +144,8 @@ export default class Enemy extends CollidesWithObjects {
         this.mesh = navMesh;
     }
     public exterminate(player: Vector2, crates) {
-        const {point} = this as unknown as PerspectiveMixinType;
-        const body = ((this as unknown as GameObject).body as Physics.Arcade.Body);
+        const {point} = this;
+        const body = (this.body as Physics.Arcade.Body);
         // const tree = new RTree();
         //     const reachSize = body.width;
         //     const bbox = {
@@ -190,9 +188,8 @@ export default class Enemy extends CollidesWithObjects {
       }
 
       public update() {
-          const that = this as unknown as PerspectiveMixinType;
-          that.predraw();
-          const { dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this as unknown as PerspectiveMixinType;
+          this.predraw();
+          const { dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this;
           if (this.pushedCrate) {
               if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) > this.pushedCrate.body.width) {
                   this.pushedCrate.enemy = null;
@@ -203,18 +200,18 @@ export default class Enemy extends CollidesWithObjects {
           const obscuredShapes: ShapeCollectionItem[] = [];
           const unubscuredShapes: ShapeCollectionItem[] = [];
 
-          setPosition(this.pathHelper, that);
-          setPosition(this.head, that);
+          setPosition(this.pathHelper, this);
+          setPosition(this.head, this);
           setPosition(this.center, centerCenter);
           this.head.update();
-          const { equator, pi2: all, shape: sphere} = this.head as unknown as SphereClass;
+          const { equator, pi2: all, shape: sphere} = this.head;
           const {curve: eyeLine, isObscured} = this.head.getSlice('x', 0.65);
           const {curve: brow} = this.head.getSlice('x', 0.75);
           const hoverPosition = centerBottom.clone().lerp(point, 0.1);
           const feetCircle = new Circle(hoverPosition.x, hoverPosition.y, sphere.radius / 2.3);
           graphics.fillCircleShape(feetCircle);
 
-          (this as unknown as ContainerLite).setChildPosition((this.shadow as unknown as GameObject), centerBottom.x, centerBottom.y);
+          this.setChildPosition((this.shadow as unknown as GameObject), centerBottom.x, centerBottom.y);
           const bodyAngle = this.getBodyAngle();
           const direction = Normalize(bodyAngle) / all;
 
@@ -235,7 +232,7 @@ export default class Enemy extends CollidesWithObjects {
           const {shape: { x, y, radius } } = this.head;
 
           if (torso) {
-              obscuredShapes.push(torso);
+              obscuredShapes.push({...torso, ...{order: 0}});
               const {p3, p4} = torso.points;
               const ang1 = (BetweenPoints(this.head.shape, p3)) ;
               const ang2 = (BetweenPoints(this.head.shape, p4));
@@ -243,13 +240,13 @@ export default class Enemy extends CollidesWithObjects {
               const startAngle = pastCenter('y') ? ang2 : ang1;
               const endAngle = startAngle === ang1 ? ang2 : ang1;
               const shape = { x, y, radius, startAngle , endAngle, anticlockwise: false };
-              unubscuredShapes.push({type: -1, shape, color: this.color, strokeColor: handColor});
+              unubscuredShapes.push({type: -1, shape, color: this.color, strokeColor: handColor, order: 1});
           } else {
-              unubscuredShapes.push({type, shape: new Circle(x, y, radius), color: this.color, strokeColor: handColor});
+              unubscuredShapes.push({type, shape: new Circle(x, y, radius), color: this.color, strokeColor: handColor, order: 2});
           }
 
-          const hand1Shape = {type, shape: new Circle(hand1.x, hand1.y, this.gridUnit), color: handColor, strokeColor: 0x000};
-          const hand2Shape = {type, shape: new Circle(hand2.x, hand2.y, this.gridUnit), color: handColor, strokeColor: 0x000};
+          const hand1Shape = {type, shape: new Circle(hand1.x, hand1.y, this.gridUnit), color: handColor, strokeColor: 0x000, order: 6};
+          const hand2Shape = {type, shape: new Circle(hand2.x, hand2.y, this.gridUnit), color: handColor, strokeColor: 0x000, order: 7};
           graphics.fillStyle(this.color, 1);
           graphics.fillPath();
           const nose = relativeAngle - direction;
@@ -263,8 +260,8 @@ export default class Enemy extends CollidesWithObjects {
 
           const faceFeatColor = 0x16D8D8;
           const lineWidth = this.size / 4;
-          const arm1 = {type: LINE, lineWidth,  shape: new Line(shoulder1Point.x, shoulder1Point.y, hand1.x, hand1.y), color: 0x000};
-          const arm2 = {type: LINE, lineWidth, shape: new Line(shoulder2Point.x, shoulder2Point.y, hand2.x, hand2.y), color: 0x000};
+          const arm1 = {type: LINE, lineWidth,  shape: new Line(shoulder1Point.x, shoulder1Point.y, hand1.x, hand1.y), color: 0x000, order: 4};
+          const arm2 = {type: LINE, lineWidth, shape: new Line(shoulder2Point.x, shoulder2Point.y, hand2.x, hand2.y), color: 0x000, order: 5};
           let mouth2 = equator.getPoint(eye2Angle);
           let mouth1 = equator.getPoint(eye1Angle);
 
@@ -280,7 +277,7 @@ export default class Enemy extends CollidesWithObjects {
             }
           if (!noseObscured) {
                 const shape = new QuadraticBezier(mouth1, nosePoint, mouth2);
-                unubscuredShapes.push({type: -2, shape, color: 0x000});
+                unubscuredShapes.push({type: -2, shape, color: 0x000, order: 3});
             }
 
           if (this.head.isObscured(shoulder1Point)) {
@@ -300,8 +297,8 @@ export default class Enemy extends CollidesWithObjects {
 
           const wh = this.gridUnit / 1.7;
 
-          unubscuredShapes.push({type: -1, shape: this.getDomeShape(eye1, wh), color: faceFeatColor, strokeColor: handColor});
-          unubscuredShapes.push({type: -1, shape: this.getDomeShape(eye2, wh), color: faceFeatColor, strokeColor: handColor});
+          unubscuredShapes.push({type: -1, shape: this.getDomeShape(eye1, wh), color: faceFeatColor, strokeColor: handColor, order: 8});
+          unubscuredShapes.push({type: -1, shape: this.getDomeShape(eye2, wh), color: faceFeatColor, strokeColor: handColor, order: 9});
 
           this.drawShapes(obscuredShapes);
           graphics.fillStyle(this.color, 1);
@@ -330,7 +327,7 @@ export default class Enemy extends CollidesWithObjects {
 
           // this.collisionRect && graphics.fillRectShape(this.collisionRect);
           const curve = new QuadraticBezier(browStart, browmiddle, browEnd);
-          unubscuredShapes.push({type: -2, shape: curve, color: handColor});
+          unubscuredShapes.push({type: -2, shape: curve, color: handColor, order: 10});
           this.drawShapes(unubscuredShapes);
           graphics.lineStyle(0, 0);
           }
@@ -373,7 +370,7 @@ export default class Enemy extends CollidesWithObjects {
         const body = gameobject.body as Physics.Arcade.Body;
 
         // get the center of the body
-        const { point: center } = this as unknown as PerspectiveMixinType;
+        const { point: center } = this;
 
         const dir = target.clone().subtract(center);
         dir.normalize();

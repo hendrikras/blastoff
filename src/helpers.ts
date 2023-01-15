@@ -26,6 +26,7 @@ export interface ShapeCollectionItem {
     strokeColor?: number | undefined;
     lineWidth?: number | undefined;
     shape: object;
+    order: number;
 }
 
 export enum Direction {
@@ -271,4 +272,18 @@ export function getNavMesh(crates, worldbounds, div) {
             ];
         },
     );
+}
+
+// function that extracts the members of a mixin and adds them to a class
+export function applyMixins(derivedCtor: any, baseCtors: any[]) {
+    baseCtors.forEach(baseCtor => {
+        Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
+            // Use the correct type for the defineProperty() method
+            Object.defineProperty(
+                derivedCtor.prototype,
+                name,
+                Object.getOwnPropertyDescriptor(baseCtor.prototype, name)!
+            );
+        });
+    });
 }

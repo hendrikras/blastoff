@@ -14,7 +14,7 @@
     "@pinkkis/phaser-plugin-pasuuna": "^0.5.3",
     "javascript-astar": "^0.4.1",
     "phaser": "^3.55.2",
-    "phaser3-rex-plugins": "^1.1.41",
+    "phaser3-rex-plugins": "^1.1.75",
     "rectangle-decomposition": "^1.0.0",
     "smooth-polyline": "^1.0.8"
   },

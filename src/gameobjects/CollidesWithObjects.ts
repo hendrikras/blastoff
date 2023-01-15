@@ -23,14 +23,15 @@ import LineToLine = Phaser.Geom.Intersects.LineToLine;
 import GameObject = Phaser.GameObjects.GameObject;
 
 type BodyCollision = Types.Physics.Arcade.ArcadeBodyCollision;
+export type SphereType =  PerspectiveMixinType & SphereClass;
 
-export default class CollidesWithObjects extends ContainerLite {
+export default class CollidesWithObjects extends ContainerLite implements PerspectiveMixinType {
     protected distanceToBoxCorner: number;
     protected pushedCrate: Crate | null;
-    protected gridUnit: number;
+    public gridUnit: number;
     protected blockedDirection: BodyCollision = { up: false, down: false, right: false, left: false, none: true };
     protected lastDirection: number;
-    protected head: SphereClass;
+    protected head: SphereType;
     protected gForce: BodyCollision;
     protected onPlatform?: GameObject | boolean;
     set falling(falling: BodyCollision) {
@@ -53,6 +54,25 @@ export default class CollidesWithObjects extends ContainerLite {
         this.lastDirection = Math.PI / 2;
         this.gForce = {none: true} as BodyCollision;
     }
+    vertices: Vector2[];
+    vanishPoint: Vector2;
+    dimensions: Vector2;
+    point: Vector2;
+    centerBottom: Vector2;
+    centerCenter: Vector2;
+    centerUp: Vector2;
+    centerDown: Vector2;
+    point7: Vector2;
+    graphics: GameObjects.Graphics;
+    draw: () => void;
+    pastCenter: (a: string) => boolean;
+    mp: () => void;
+    color: number;
+    predraw: () => void;
+    drawVertices: (faceByDirection: Vector2[]) => void;
+    getFaceByDirection: (direction: Direction) => Vector2[];
+    drawInView: () => void;
+    dp: (p: Vector2) => void;
     public isBlockedDirection(direction: string) {
         return this.blockedDirection[direction];
     }
@@ -164,7 +184,12 @@ export default class CollidesWithObjects extends ContainerLite {
                 graphics.lineStyle(this.gridUnit / 4, strokeColor, 1);
                 graphics.fillPoints(shape.getPoints());
                 if (strokeColor !== -1) {
+                    const points = shape.getPoints();
+                    // first point is also the last point
+                    points.push(points[0]);
+                    graphics.strokePoints(points);
                     graphics.strokePoints(shape.getPoints());
+                    
                 }
             }
         });
