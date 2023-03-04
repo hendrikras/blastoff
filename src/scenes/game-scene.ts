@@ -39,6 +39,7 @@ export class GameScene extends Phaser.Scene {
   private prison: Physics.Arcade.Sprite;
   private rocket: Physics.Arcade.Sprite;
   private crates: Phaser.Physics.Arcade.Group;
+  private ladders: Phaser.Physics.Arcade.Group;
   private fallingCrates: Crate[];
   private boundedCrates: Crate[];
   private enemyCollider: Phaser.Physics.Arcade.Collider;
@@ -73,8 +74,8 @@ export class GameScene extends Phaser.Scene {
     // create the biggest world that will fit on this screen.
 
     this.background = this.physics.scene.add.tileSprite(getGameWidth(this) / 2, getGameHeight(this) / 2, getGameWidth(this), getGameHeight(this), 'stars');
-    const setBounds = (item: Phaser.Physics.Arcade.World) => item.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
-    setBounds(this.physics.world);
+    this.physics.world.setBounds(startX, startY, getSize(isLandscape), getSize(!isLandscape));
+
     const {left, right, top, bottom, height, width, centerX, centerY} = this.physics.world.bounds;
     const tiles = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, width, height, 'tile');
     tiles.setTileScale(this.gridUnit / 7);
@@ -94,7 +95,23 @@ export class GameScene extends Phaser.Scene {
       key: 'crates',
     };
     this.crates = this.physics.add.group(crateConfig);
-    const quarterCrate = this.gridUnit * 2.6;
+    
+    const ladderScale = this.gridUnit / 10;
+    // create a collection of sprites that do not collide with the player or crate
+    const ladderConfig = {
+      classType: Sprite,
+      active: true,
+      visible: true,
+      repeat: 1,
+      setScale: { x: ladderScale, y: ladderScale},
+      key: 'pipes'
+    };
+
+    // const pipes = this.physics.scene.add.tileSprite(getSize(isLandscape) / 2 + startX, getSize(!isLandscape) / 2 + startY, width, height, 'pipes');
+
+    // pipes.setTileScale(this.gridUnit / 5);
+    const quarterCrate = this.gridUnit * 2.6
+
 
     this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
 
@@ -118,6 +135,7 @@ export class GameScene extends Phaser.Scene {
     const wallright = new CubeType(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor, dirleft, Collision4Direction(Direction.left));
     const walls = [walltop, wallbottom, wallleft, wallright];
     walls.forEach((w: Wall) => {
+      w.drawDepth = 1;
       w.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
       w.update() ;
     });
@@ -129,6 +147,7 @@ export class GameScene extends Phaser.Scene {
       const w = long ? 1 : length;
       const cube = new CubeType(this, centerY, centerX, quarterCrate * w, quarterCrate * h, quarterCrate * 4, 0x43464B, 'cube') as Wall;
       cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
+      cube.drawDepth = 1;
       this.crates.add(cube);
     }
 
@@ -139,27 +158,23 @@ export class GameScene extends Phaser.Scene {
     this.crates.setDepth(3);
     this.enemy = new EnemyType({scene: this, x: left, y: top + quarterCrate * 2}, this.gridUnit, quarterCrate * 1.2, this.gridUnit / 4);
     this.player = new PlayerType({scene: this, x: centerX, y: bottom + this.gridUnit}, this.gridUnit, this.crates, quarterCrate, this.enemy);
-    // @ts-ignore
     this.player.scale = 3;
-    // @ts-ignore
-    this.physics.add.overlap(this.player, this.crates, this.player.crateCollider, null, true);
-    // @ts-ignore
-    this.physics.add.overlap(this.player, this.enemy, () => this.endGame(), null, true);
-    // @ts-ignore
+
+    this.physics.add.overlap(this.player, this.crates, this.player.crateCollider as ArcadePhysicsCallback);
+   
+    this.physics.add.overlap(this.player, this.enemy, () => this.endGame());
     const cratesCollider = this.physics.add.collider(this.enemy, this.crates);
-    // @ts-ignore
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap as ArcadePhysicsCallback);
-    // @ts-ignore
-    this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff(), null, true);
+    this.rocketCollider = this.physics.add.overlap(this.player, this.rocket, () => this.blastOff());
+
     this.fallingCrates = [];
-    // @ts-ignore
     const enemy = this.enemy;
     const player = this.player as ContainerLite;
-    function placeCrate(crate, crates) {
+    function placeCrate(crate: Sprite, crates: Phaser.Physics.Arcade.Group) {
       crate.setRandomPosition(startX, startY, width, height);
       crates.children.iterate((item) => {
         if (item !== crate) {
-          const pos = point2Vec(item as Vector2);
+          const pos = point2Vec(item as unknown as Vector2);
           const cratePos = point2Vec(crate);
           const rad = quarterCrate * 6;
           if (pos.distance(crate) <= rad || cratePos.distance(enemy as unknown as Vector2) <= rad || cratePos.distance(player) <= rad) {
@@ -169,10 +184,24 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    this.crates.children.iterate((crate, idx) => {
-      placeCrate(crate, this.crates);
+    this.crates.children.iterate((crate) => {
+      placeCrate(crate as Sprite, this.crates);
       this.fallingCrates.push(crate as Crate);
     });
+
+    this.ladders = this.physics.add.group(ladderConfig);
+    this.ladders.setDepth(0);
+
+    this.ladders.children.iterate((ladder, idx) => {
+      const size = getSize(isLandscape);
+      const obj = (ladder as Sprite);
+      // random number between startX and size but never less than startX
+      const x = getRandomInt(size - obj.body.width) + startX + obj.body.width / 2;
+
+      obj.setPosition(x, getSize(!isLandscape) - obj.body.height / 2, 0, 0);
+    });
+
+    this.physics.add.overlap(this.player, this.ladders, this.player.ladderCollider);
 
     const polys = getNavMesh(this.crates, this.physics.world.bounds, quarterCrate * 1.2);
 
@@ -212,9 +241,7 @@ export class GameScene extends Phaser.Scene {
 
         if (gameObject instanceof Player && this.player.falling.down) {
           this.player.surface = true;
-          const none = true;
         } else {
-            // @ts-ignore
           gameObject.update();
       }
       } else {
@@ -264,11 +291,10 @@ export class GameScene extends Phaser.Scene {
           }
         });
     const noDirection = { up: false, down: false, right: false, left: false, none: true };
-    if (!(this.player).isBlockedDirection('down')) {
-      (this.player as ContainerLite).y += this.gravitySpeed;
+
+    if (!(this.player).isBlockedDirection('down') && !this.player.getOnLadder()) {
+      (this.player).y += this.gravitySpeed;
       this.player.setFalling(collision);
-    } else {
-      this.player.setFalling(noDirection);
     }
     if (!this.enemy.isBlockedDirection('down')) {
       this.enemy.y += this.gravitySpeed;

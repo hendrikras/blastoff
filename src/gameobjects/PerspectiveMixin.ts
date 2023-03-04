@@ -3,6 +3,7 @@ import {Constructor, Direction, lineIntersect} from '../helpers';
 import Vector2 = Phaser.Math.Vector2;
 import Wall from './Wall';
 import Graphics = Phaser.GameObjects.Graphics;
+import CollidesWithObjects from './CollidesWithObjects';
 interface Ref { idx1: number; idx2: number; mp: Vector2; }
 
 export default <TBase extends Constructor>(Base: TBase) =>
@@ -41,10 +42,11 @@ class extends Base {
   private dimensions: PMath.Vector2;
   private point: PMath.Vector2;
   private intersectMap: Ref[];
+  private _depth: number;
 
     constructor(...args: any[]) {
         super(...args);
-        const scene = args[0].x ? args[0].scene : args[0]; // ?
+        const scene = Number.isFinite(args[0]?.x) ? args[0].scene : args[0];
         const x = args[1];
         const y = args[2];
         this.graphics = scene.add.graphics();
@@ -75,10 +77,15 @@ class extends Base {
             this.setMeasurePoints(val, val);
         }
     }
+    get depth(): number {
+        return this._depth;
+    }
+    set depth(value: number) {
+        this._depth = value;
+    }
    public predraw() {
 
-       // @ts-ignore
-       const {x, y, dimensions, vanishPoint, mp } = this;
+       const {x, y, dimensions } = this as unknown as CollidesWithObjects;
        this.point.x = x;
        this.point.y = y;
        const xhalf = dimensions.x / 2;

@@ -93,28 +93,32 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
             this.blockedDirection = {up: false, left: false, right: false, down: false, none: true };
         }
     }
-    protected facingSide(crate: Crate) {
-        const { point: {x, y} } = this as unknown as PerspectiveMixinType;
-        const rect = new Rectangle(x - crate.width / 2, y - crate.height / 2, crate.width, crate.height);
+    protected facingSide(crate: Crate): Direction {
+        const { point: { x, y } } = this as PerspectiveMixinType;
+        const rect = new Rectangle(x - crate.body.width / 2, y - crate.body.height / 2, crate.body.width, crate.body.height);
         const right = rect.getLineA();
         const top = rect.getLineB();
         const left = rect.getLineC();
         const bottom = rect.getLineD();
 
-        const directions = [bottom, left, top, right];
-        const directionStrings = ['left', 'down', 'right', 'up'];
+        const directions: Line[] = [bottom, left, top, right];
+        const directionStrings: string[] = ['left', 'down', 'right', 'up'];
         const line = new Line(x, y, crate.x, crate.y);
-        let closest;
-        directions.forEach((dir, idx) => {
-            if (LineToLine(line, dir)) {
-                    closest = idx;
-                    return;
-            }
-        });
+        const closest = directions.findIndex(dir => LineToLine(line, dir));
+      
+        if (closest === -1) {
+          throw new Error('No direction found');
+        }
+      
         return Direction[directionStrings[closest]];
-    }
+      }
     protected handleCrateCollison = (crate: Crate) => {
-       this.pushCrate(Direction[this.facingSide(crate)], crate);
+        const dir = Direction[this.facingSide(crate)];
+
+        if (dir) {
+            this.pushCrate(dir, crate);
+        }
+   
     }
     protected getTrepazoid(circle1, circle2, color, percent, intersectPoint: Vector2 | null = null, strokeColor = -1) {
         const { graphics, point } = this as unknown as PerspectiveMixinType;
@@ -135,7 +139,7 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
             const [p1, p2, p3, p4] = tp;
             const shape = new Path(p1.x, p1.y);
             const mi = cross.clone().lerp(point, percent);
-            const curve = new QuadraticBezier(p1, mi, p2);
+            const curve = new QuadraticBezier(point2Vec(p1), mi, point2Vec(p2));
             shape.add(curve);
             shape.lineTo(p2.x, p2.y);
             shape.lineTo(p3.x, p3.y);

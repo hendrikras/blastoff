@@ -63,10 +63,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('rocket', 'assets/rocket.svg');
     this.load.image('tile', 'assets/parkay-floor.svg');
     this.load.image('stars', 'assets/stars.svg');
-    this.load.image('hair', 'assets/hair.svg');
-    this.load.image('sick', 'assets/sick.svg');
-    this.load.image('neutral', 'assets/neutral.svg');
-    this.load.image('torso', 'assets/torso.svg');
+    this.load.image('pipes', 'assets/pipes.svg');
 
     this.load.spritesheet('crates', 'assets/Crates.svg', { frameWidth: 105, frameHeight: 105 });
     this.load.spritesheet('expressions', 'assets/expressions.svg', { frameWidth: 308, frameHeight: 251 });
