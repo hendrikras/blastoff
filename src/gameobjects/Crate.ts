@@ -37,6 +37,10 @@ class Crate extends Physics.Arcade.Sprite {
         // @ts-ignore
        this.drawPoints = this.drawFace;
     }
+    public destroy(fromScene?: boolean | undefined): void {
+        (this as unknown as PerspectiveMixinType).graphics.clear();
+        super.destroy(fromScene);
+    }
 
     public update() {
         const that = this as unknown as PerspectiveMixinType;

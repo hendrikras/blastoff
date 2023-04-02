@@ -93,7 +93,6 @@ export default class Player extends CollidesWithObjects {
         this.shoe2.setScale(0.2);
         this.shoe2.setStrokeStyle(...shoeStyle);
         this.shoe2.setDepth(2);
-        console.log(this.shoe1.depth);
         
         this.center = new Circle(x, y, size * 1.1);
         this.reach = new Circle(x, y, size * 1.3);
@@ -117,7 +116,10 @@ export default class Player extends CollidesWithObjects {
         const h = this.worldBounds.bottom - this.worldBounds.y;
         this.max = h > w ? h : w;
     }
-
+    public addCrate(crate: Crate) {
+        this.crates.push(crate);
+    }
+    
     public isMoving() {
         return this.hasInput;
     }

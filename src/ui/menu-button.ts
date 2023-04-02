@@ -13,12 +13,15 @@ export class MenuButton extends GameObjects.Rectangle {
     this.setOrigin(0, 0);
 
     this.label = scene.add.text(x + padding, y + padding, text).setFontSize(18).setAlign('center');
+    this.label.setDepth(11);
 
     const labelWidth = this.label.width + padding;
     const labelHeight = this.label.height + padding;
 
     this.width = labelWidth >= minimumWidth ? labelWidth : minimumWidth;
     this.height = labelHeight >= minimumHeight ? labelHeight : minimumHeight;
+
+    this.setDepth(10);
 
     this.setInteractive({ useHandCursor: true })
       .on('pointerover', this.enterMenuButtonHoverState)

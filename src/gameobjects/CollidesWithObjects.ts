@@ -94,6 +94,7 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
         }
     }
     protected facingSide(crate: Crate): Direction {
+
         const { point: { x, y } } = this as PerspectiveMixinType;
         const rect = new Rectangle(x - crate.body.width / 2, y - crate.body.height / 2, crate.body.width, crate.body.height);
         const right = rect.getLineA();
