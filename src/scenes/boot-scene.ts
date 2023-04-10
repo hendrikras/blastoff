@@ -14,6 +14,10 @@ export class BootScene extends Phaser.Scene {
     super(sceneConfig);
   }
 
+  public init(data){
+    console.log('boot', data);
+  }
+
   public preload() {
     const halfWidth = getGameWidth(this) * 0.5;
     const halfHeight = getGameHeight(this) * 0.5;
@@ -46,7 +50,7 @@ export class BootScene extends Phaser.Scene {
       progressBar.destroy();
       progressBarContainer.destroy();
 
-      this.scene.start('MainMenu');
+      this.scene.start('MainMenu', {test: 'test'});
     });
     this.loadAssets();
 

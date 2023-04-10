@@ -34,6 +34,16 @@ export class EditorScene extends BaseScene {
   // create a private enum for game objects
   private GameObjectType: GameObjectType = GameObjectType.NONE;
 
+  private convertMeasures(crate: Sprite){
+    // convert the crates position and scale to the gridunit
+    let x = crate.x / this.gridUnit;
+    let y = crate.y / this.gridUnit;
+    let w = crate.width / this.gridUnit;
+    let h = crate.height / this.gridUnit;
+    const scale = crate.scale;
+    return { x, y, w, h, name: crate.name, scale: { x: crate.scale / this.gridUnit} };
+  }
+
   constructor() {
     super(sceneConfig);
   }
@@ -62,7 +72,7 @@ export class EditorScene extends BaseScene {
       const height = pointer.y - pointer.downY;
       if (isInBounds(pointer.x, pointer.y) && isInBounds(pointer.downX, pointer.downY)) {
         if (this.GameObjectType === GameObjectType.WALL) {
-          const cube = new CubeType(
+          const cube = new this.CubeType(
             this,
             pointer.downX + width / 2,
             pointer.downY + height / 2,
@@ -75,6 +85,7 @@ export class EditorScene extends BaseScene {
           cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
           cube.drawDepth = 1;
           cube.update();
+          console.log(cube);
           this.addCrate((cube as unknown) as Crate);
         } else if (this.GameObjectType === GameObjectType.LADDER) {
           const ladderScale = this.gridUnit / 10;
@@ -128,9 +139,25 @@ export class EditorScene extends BaseScene {
       this.GameObjectType = GameObjectType.REMOVE;
     });
 
-    new MenuButton(this, this.gridUnit, this.gridUnit * 50, "Start Game", () => {
-      // this.GameObjectType = GameObjectType.REMOVE;
-      this.scene.start("Game")
+    new MenuButton(this, this.gridUnit, this.gridUnit * 50, "Save", () => {
+      const crates = this.player.getCrates();
+      console.log('saving', crates);
+      this.scene.start("MainMenu", {crates})
+    });
+
+    new MenuButton(this, this.gridUnit, this.gridUnit * 60, "Show", () => {
+      const crates = this.player.getCrates().map(c => this.convertMeasures(c));
+      const ladders = this.ladders.getChildren().map(l => this.convertMeasures(l as unknown as Sprite));
+      const level = {
+        crates,
+        player: this.convertMeasures(this.player as unknown as Sprite),
+        enemy: this.convertMeasures(this.enemy as unknown as Sprite),
+        prison: this.convertMeasures(this.prison),
+        rocket: this.convertMeasures(this.rocket),
+        ladders,
+        isLandscape: this.isLandscape,
+      }
+      console.log(level);
     });
 
     this.tiles.setInteractive();
@@ -148,7 +175,7 @@ export class EditorScene extends BaseScene {
           this.GameObjectType = GameObjectType.NONE;
           break;
         case GameObjectType.CRATE:
-          const crate = new CrateType(this.scene.scene, pointer.x, pointer.y, "crates");
+          const crate = new this.CrateType(this.scene.scene, pointer.x, pointer.y, "crates");
           crate.setScale(this.gridUnit / 10);
           crate.setDepth(3);
           crate.update();
@@ -183,7 +210,6 @@ export class EditorScene extends BaseScene {
           break;
       }
     });
-    const CrateType = PerspectiveObject(CrateFace(Crate));
 
     const quarterCrate = this.gridUnit * 2.6;
     const { centerX, centerY } = this.physics.world.bounds;
@@ -195,8 +221,7 @@ export class EditorScene extends BaseScene {
       this.prison.setAlpha(0.5);
     });
 
-    this.crates.add(this.prison);
-    const CubeType = PerspectiveObject(Wall);
+    // this.crates.add(this.prison);
     this.rocket.setInteractive();
     this.rocket.on("pointerdown", pointer => {
       this.GameObjectType = GameObjectType.ROCKET;

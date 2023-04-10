@@ -44,6 +44,9 @@ export class BaseScene extends Phaser.Scene {
   constructor(sceneConfig:  Phaser.Types.Scenes.SettingsConfig) {
     super(sceneConfig);
   }
+//   public init(data) {
+
+//   }
   protected getSize(input: boolean): number {
     return input ? this.measureLong : this.measureShort;
   }
@@ -75,6 +78,7 @@ export class BaseScene extends Phaser.Scene {
     this.tiles = this.physics.scene.add.tileSprite(this.getSize(this.isLandscape) / 2 + this.startX, this.getSize(!this.isLandscape) / 2 + this.startY, width, height, 'tile');
     this.tiles.setTileScale(this.gridUnit / 7);
     this.CrateType =  PerspectiveObject(CrateFace(Crate));
+    this.CubeType =  PerspectiveObject(CrateFace(Wall));
     const Prison =  PerspectiveObject(PrisonFace(Crate));
     const EnemyType = PerspectiveObject(Enemy);
 
@@ -83,7 +87,7 @@ export class BaseScene extends Phaser.Scene {
     const quarterCrate = this.gridUnit * 2.6
     this.quarterCrate = quarterCrate;
 
-    this.prison = new Prison(this.physics.scene, centerX, bottom, 'prison');
+    this.prison = new Prison(this.physics.scene, centerX, centerY, 'prison');
 
     this.prison.setScale(this.gridUnit / 14.1 );
 
@@ -104,6 +108,10 @@ export class BaseScene extends Phaser.Scene {
     const wallbottom = new CubeType(this, centerX, bottom + edge / 2 , width, edge, quarterCrate * 4, wallcolor, up, Collision4Direction(Direction.up));
     const wallleft = new CubeType(this, left - edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor, dirright, Collision4Direction(Direction.right));
     const wallright = new CubeType(this, right + edge / 2, centerY , edge, height, quarterCrate * 4, wallcolor, dirleft, Collision4Direction(Direction.left));
+
+    const CrateType = PerspectiveObject(CrateFace(Crate));
+    this.CrateType = CrateType;
+
     const walls = [walltop, wallbottom, wallleft, wallright];
     walls.forEach((w: Wall) => {
       w.drawDepth = 1;

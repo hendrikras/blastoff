@@ -1,19 +1,19 @@
-import {Physics, Types} from 'phaser';
+import {Types} from 'phaser';
 
 import Crate from '../gameobjects/Crate';
-
+import Wall from '../gameobjects/Wall';
 import {
   blockedInDirection,
   collidesOnAxes,
   getGameHeight,
-  getGameWidth, 
-  getNavMesh,
+  getGameWidth, getNavMesh, getRandomInt, point2Vec,
   reachedBound,
 } from '../helpers';
+import Vector2 = Phaser.Math.Vector2;
 
 import Sprite = Phaser.Physics.Arcade.Sprite;
+
 import { BaseScene } from './base-scene';
-import levels from '../../assets/levels.json';
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -23,62 +23,41 @@ const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   },
 };
 
-const levelName= 'tutorial1';
-
 export class GameScene extends BaseScene{
 
   private fallingCrates: Crate[];
   private boundedCrates: Crate[] = [];
   private enemyCollider: Phaser.Physics.Arcade.Collider;
+  private levelData;
+
   private rocketCollider: Phaser.Physics.Arcade.Collider;
+  // private data;
 
   constructor() {
     super(sceneConfig);
   }
-
-  private flipCoordsForAspect(p: Physics.Arcade.Body){
-    return this.isLandscape && levels[levelName].isLandscape ? {x: p.x, y: p.y, height: p.height, width: p.width} : {x: p.y, y: p.x, height: p.width, width: p.height};
+  public init (data){
+    this.levelData = data;
   }
-
   public create() {
     super.create();
+  
+    const crateConfig = {
+      classType: this.CrateType, // This is the class we created
+      active: true,
+      visible: true,
+      repeat: 9,
+      setScale: { x: this.gridUnit / 10, y: this.gridUnit / 10},
+      collideWorldBounds: true,
+      key: 'crates',
+    };
+    // this.crates = this.physics.add.group(crateConfig);
     
     // add crates with config
-    const crateGroup = this.physics.add.group();
-    // this.levelData.crates?.forEach((crate) => {
-    //   this.addCrate(crate);
-    //   crate.update();
-    // });
-
-    levels[levelName].crates.forEach((gameObj) => {
-
-      const crate = {...gameObj, ...this.flipCoordsForAspect(gameObj as unknown as Physics.Arcade.Body)};
-      switch (crate.name) {
-        case "cube":
-          const depth = this.gridUnit * 2.6 * 4;
-          const vals = [crate.x, crate.y, crate.w, crate.h].map(n => n * this.gridUnit);
-          const [x, y, w, h] = vals;
-          const cube = new this.CubeType( this, x, y, w, h, depth, 0x43464b, crate.name);
-          cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
-          cube.drawDepth = 1;
-          this.addCrate(cube);
-          break
-        case "crates":
-          const c = new this.CrateType(this.scene.scene, crate.x * this.gridUnit, crate.y * this.gridUnit, crate.name);
-          c.setScale(crate.scale.x * this.gridUnit, crate.scale.x * this.gridUnit);
-          c.update();
-          this.addCrate (c);
-          break;
-        case "prison":
-          this.prison.setPosition(crate.x * this.gridUnit, crate.y * this.gridUnit);
-          break;
-    }});
-    this.player.setPosition(levels[levelName].player.x * this.gridUnit, levels[levelName].player.y * this.gridUnit);
-    this.enemy.setPosition(levels[levelName].enemy.x * this.gridUnit, levels[levelName].enemy.y * this.gridUnit);
-    this.rocket.setPosition(levels[levelName].rocket.x * this.gridUnit, levels[levelName].rocket.y * this.gridUnit);
+    const crateGroup = this.physics.add.group(crateConfig);
     
     // convert crateGroup to array
-    // crateGroup.getChildren().forEach(crate => this.addCrate(crate as any));
+    crateGroup.getChildren().forEach(crate => this.addCrate(crate as any));
 
     this.crates.setDepth(3);
 
@@ -99,17 +78,30 @@ export class GameScene extends BaseScene{
 
     const {startX, startY, enemy, player} = this;
     const {height, width, centerX, centerY} = this.physics.world.bounds;
+    function placeCrate(crate: Sprite, crates: Phaser.Physics.Arcade.Group) {
+      crate.setRandomPosition(startX, startY, width, height);
+      crates.children.iterate((item) => {
+        if (item !== crate) {
+          const pos = point2Vec(item as unknown as Vector2);
+          const cratePos = point2Vec(crate);
+          const rad = quarterCrate * 6;
+          if (pos.distance(crate) <= rad || cratePos.distance(enemy as unknown as Vector2) <= rad || cratePos.distance(player) <= rad) {
+            placeCrate(crate, crates);
+          }
+        }
+      });
+    }
 
-    // for (let i = 0; i < getRandomInt(4); i++) {
-    //   const long = getRandomInt(2) === 0;
-    //   const length = 8;
-    //   const h = long ? length : 1;
-    //   const w = long ? 1 : length;
-    //   const cube = new this.CubeType(this, centerY, centerX, quarterCrate * w, quarterCrate * h, quarterCrate * 4, 0x43464B, 'cube') as Wall;
-    //   cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
-    //   cube.drawDepth = 1;
-    //   this.crates.add(cube);
-    // }
+    for (let i = 0; i < getRandomInt(4); i++) {
+      const long = getRandomInt(2) === 0;
+      const length = 8;
+      const h = long ? length : 1;
+      const w = long ? 1 : length;
+      const cube = new this.CubeType(this, centerY, centerX, quarterCrate * w, quarterCrate * h, quarterCrate * 4, 0x43464B, 'cube') as Wall;
+      cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
+      cube.drawDepth = 1;
+      this.crates.add(cube);
+    }
 
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider as ArcadePhysicsCallback);
    
@@ -121,18 +113,18 @@ export class GameScene extends BaseScene{
 
     this.crates.children.iterate((crate) => {
 
-      // placeCrate(crate as Sprite, this.crates);
+      placeCrate(crate as Sprite, this.crates);
       this.fallingCrates.push(crate as Crate);
     });
     this.ladders = this.physics.add.group(ladderConfig);
     this.ladders.setDepth(0);
-    // this.ladders.children.iterate((ladder, idx) => {
-    //   const size = this.getSize(this.isLandscape);
-    //   const obj = (ladder as Sprite);
-    //   // random number between startX and size but never less than startX
-    //   const x = getRandomInt(size - obj.body.width) + startX + obj.body.width / 2;
-    //   obj.setPosition(x, this.getSize(!this.isLandscape) - obj.body.height / 2, 0, 0);
-    // });
+    this.ladders.children.iterate((ladder, idx) => {
+      const size = this.getSize(this.isLandscape);
+      const obj = (ladder as Sprite);
+      // random number between startX and size but never less than startX
+      const x = getRandomInt(size - obj.body.width) + startX + obj.body.width / 2;
+      obj.setPosition(x, this.getSize(!this.isLandscape) - obj.body.height / 2, 0, 0);
+    });
     this.physics.add.overlap(this.player, this.ladders, this.player.ladderCollider);
     const polys = getNavMesh(this.crates, this.physics.world.bounds, quarterCrate * 1.2);
     this.enemy.updateMesh(polys);

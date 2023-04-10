@@ -119,6 +119,10 @@ export default class Player extends CollidesWithObjects {
     public addCrate(crate: Crate) {
         this.crates.push(crate);
     }
+
+    public getCrates(){
+        return this.crates;
+    }
     
     public isMoving() {
         return this.hasInput;
