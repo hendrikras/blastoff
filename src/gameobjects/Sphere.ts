@@ -82,7 +82,6 @@ export default class extends Wall {
         this.$equator = new Ellipse(centerCenter.x, centerCenter.y, xRadius, this.radius, 0, 1, true,  this.angle2VP);
         this.$meridian = new Ellipse(centerCenter.x, centerCenter.y, yRadius, this.radius, 0, 1, true, this.angle2VP);
 
-        // this.equator.draw(graphics);
         graphics.fillStyle(0xFFF000);
         const eqautorAxis1 = this.equator.getPoint(0.25);
         const eqautorAxis2 = this.equator.getPoint(0.75);
@@ -93,9 +92,6 @@ export default class extends Wall {
         this.$isObscured = (p: Vector2) => middle.distance(p) <= eqautorAxis1.distance(eqautorAxis2) && [eqautorAxis1, eqautorAxis2];
 
         this.$equatorAxis = new Line(eqautorAxis1.x, eqautorAxis2.y, eqautorAxis2.x, eqautorAxis2.y);
-
-        // graphics.strokeCircleShape(areaCircle);
-        // this.meridian.draw(graphics);
     }
 
     private getPlanes(center, pole, circle) {
