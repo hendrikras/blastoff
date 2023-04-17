@@ -44,8 +44,10 @@ export const getGameHeight = (scene: Phaser.Scene) => {
     return scene.game.scale.height;
   };
 export const collidesOnAxes = (crate: Crate, item: Crate, direction: ArcadeBodyCollision, max: number): boolean => {
-    const extended = new Rectangle(direction.left ? 0 : crate.body.left, direction.up ? 0 : crate.body.top, direction.right ? max : direction.left ? crate.body.right : crate.body.width, direction.down ? max : direction.up ? crate.body.bottom : crate.body.height);
-    const collides = new Rectangle(item.body.left, item.body.top, item.body.width, item.body.height);
+    const body = crate.body || {left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0};
+    const ib = item.body || {left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0};
+    const extended = new Rectangle(direction.left ? 0 : body.left, direction.up ? 0 : body.top, direction.right ? max : direction.left ? body.right : body.width, direction.down ? max : direction.up ? body.bottom : body.height);
+    const collides = new Rectangle(ib.left, ib.top, ib.width, ib.height);
     return RectangleToRectangle(extended, collides);
 };
 export const Collision4Direction = (dir: Direction) => ({none: dir === Direction.none, up: dir === Direction.up, down: dir === Direction.down, left: dir === Direction.left, right: dir === Direction.right });
@@ -57,8 +59,11 @@ export const blockedInDirection = (crate: Crate, otherCrate: Crate | undefined, 
     return true;
   }
   if (otherCrate) {
-      const box = new Rectangle(crate.body.left - speed, crate.body.top - speed, crate.body.width + speed, crate.body.height + speed);
-      const otherBox = new Rectangle(otherCrate.body.left - speed, otherCrate.body.top - speed, otherCrate.body.width + speed, otherCrate.body.height + speed);
+      const body = crate.body || {left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0};
+      const ob = otherCrate.body || {left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0};
+
+      const box = new Rectangle(body.left - speed, body.top - speed, body.width + speed, body.height + speed);
+      const otherBox = new Rectangle(ob.left - speed, ob.top - speed, ob.width + speed, ob.height + speed);
       return RectangleToRectangle(box, otherBox);
   } else {
     return false;
@@ -66,7 +71,9 @@ export const blockedInDirection = (crate: Crate, otherCrate: Crate | undefined, 
  };
 
 export const reachedBound = (crate: Crate, speed: number, direction: ArcadeBodyCollision, world: ArcadeBodyBounds): boolean => {
-    const halfSize = crate.body.height / 2;
+    const body = crate.body || { height: 0};
+
+    const halfSize = body.height / 2;
     const axis = direction.up || direction.down ? 'y' : 'x';
     const d2str = direction.left ? 'left' : direction.right ? 'right' : direction.up ? 'top' : direction.down ? 'bottom' : 'none';
 

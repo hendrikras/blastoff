@@ -41,18 +41,12 @@ export class BaseScene extends Phaser.Scene {
   protected CubeType;
   protected tiles;
 
-  constructor(sceneConfig:  Phaser.Types.Scenes.SettingsConfig) {
+  constructor(sceneConfig: Phaser.Types.Scenes.SettingsConfig) {
     super(sceneConfig);
-  }
-//   public init(data) {
-
-//   }
-  protected getSize(input: boolean): number {
-    return input ? this.measureLong : this.measureShort;
   }
 
   public create() {
-    this.crates = new Phaser.Physics.Arcade.Group(this.physics.world, this.scene.scene)
+    this.crates = new Phaser.Physics.Arcade.Group(this.physics.world, this.scene.scene);
 
     const measureX = getGameWidth(this);
     const measureY = getGameHeight(this);
@@ -84,7 +78,7 @@ export class BaseScene extends Phaser.Scene {
 
     const PlayerType = PerspectiveObject(Player);
 
-    const quarterCrate = this.gridUnit * 2.6
+    const quarterCrate = this.gridUnit * 2.6;
     this.quarterCrate = quarterCrate;
 
     this.prison = new Prison(this.physics.scene, centerX, centerY, 'prison');
@@ -128,7 +122,6 @@ export class BaseScene extends Phaser.Scene {
     this.player = new PlayerType({scene: this, x: centerX, y: bottom + this.gridUnit}, this.gridUnit, this.crates, quarterCrate, this.enemy);
     this.player.scale = 3;
 
-
     (this.player.body as unknown as Sprite).setCollideWorldBounds(true);
     (this.player.body as Physics.Arcade.Body).onWorldBounds = true;
 
@@ -146,14 +139,20 @@ export class BaseScene extends Phaser.Scene {
         : this.background.tilePositionY -= this.backgoundInc;
 
     const pos = new Vector2(player.x, player.y);
-    
+
     this.enemy.exterminate(pos, this.crates);
 
     player.update();
     this.enemy.update();
 
   }
-  protected addCrate(crate: Crate){
+//   public init(data) {
+
+//   }
+  protected getSize(input: boolean): number {
+    return input ? this.measureLong : this.measureShort;
+  }
+  protected addCrate(crate: Crate) {
     this.crates.add(crate);
     this.player.addCrate(crate);
   }
@@ -178,4 +177,3 @@ export class BaseScene extends Phaser.Scene {
     }, this);
   }
 }
-

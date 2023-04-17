@@ -42,7 +42,8 @@ class extends Base {
   private dimensions: PMath.Vector2;
   private point: PMath.Vector2;
   private intersectMap: Ref[];
-  private _depth: number;
+    // tslint:disable-next-line:variable-name
+  // private _depth: number;
 
     constructor(...args: any[]) {
         super(...args);
@@ -77,12 +78,12 @@ class extends Base {
             this.setMeasurePoints(val, val);
         }
     }
-    get depth(): number {
-        return this._depth;
-    }
-    set depth(value: number) {
-        this._depth = value;
-    }
+    // get depth(): number {
+    //     return this._depth;
+    // }
+    // set depth(value: number) {
+    //     this._depth = value;
+    // }
    public predraw() {
 
        const {x, y, dimensions } = this as unknown as CollidesWithObjects;

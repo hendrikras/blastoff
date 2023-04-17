@@ -93,7 +93,7 @@ export default class Player extends CollidesWithObjects {
         this.shoe2.setScale(0.2);
         this.shoe2.setStrokeStyle(...shoeStyle);
         this.shoe2.setDepth(2);
-        
+
         this.center = new Circle(x, y, size * 1.1);
         this.reach = new Circle(x, y, size * 1.3);
         this.pathHelper = new Circle(x, y, size);
@@ -123,7 +123,7 @@ export default class Player extends CollidesWithObjects {
     public getCrates(){
         return this.crates;
     }
-    
+
     public isMoving() {
         return this.hasInput;
     }
@@ -186,7 +186,7 @@ export default class Player extends CollidesWithObjects {
         const cheek1 = nose - 0.12 % 1;
         const cheek2 = nose + 0.12 % 1;
         const faceFeatColor = 0xFFFFFF;
-        
+
         const eye1Bottom = eyeBottomLine.getPoint(eye1AngleB);
         const eye2Bottom = eyeBottomLine.getPoint(eye2AngleB);
         const eyeTop = eyeTopLine.getPoint(eye1Angle);
@@ -213,11 +213,11 @@ export default class Player extends CollidesWithObjects {
         this.walk(direction);
         const lineWidth = this.gridUnit / 10;
         const topColor = 0x6d8cac;
-        
+
         const bottomColor = 0x436b94;
         if (this.gForce.none) {
             setPosition(this.feetCircle, centerBottom);
-            
+
             unubscuredShapes.push({type: CIRCLE, strokeColor: 0x000, shape: this.head.shape, order: 2});
             unubscuredShapes.push({
                 type: -1,
@@ -235,7 +235,7 @@ export default class Player extends CollidesWithObjects {
             }
             obscuredShapes.push({type: CIRCLE, color: topColor, shape: torso, strokeColor: 0x000, order: 4})
 
-        } 
+        }
 
         if (this.gForce.none|| this.getSideForAngle(bodyAngle) !== 'right')  {
             unubscuredShapes.push({type: -1, shape: eye1, color: 0xFFFFFF, strokeColor: 0x000, lineWidth, order: this.isWalkingOnOuterBorder() ? 14 : 0});
@@ -275,7 +275,7 @@ export default class Player extends CollidesWithObjects {
                     handPos1 = point2Vec({x: this.x, y: this.y - this.bones.height / 2.5});
                     handPos2 = point2Vec({x: this.x, y: this.y - this.bones.height / 2.5});
                 }
- 
+
             // }
         } else {
             handPos1 = new Vector2(Circle.GetPoint(this.center, rightHand));
@@ -329,8 +329,8 @@ export default class Player extends CollidesWithObjects {
                 shoulder2Point = this.center.getPoint( leftHand);
             }
           }
-    
-       
+
+
         obscuredShapes.push({
             type: CIRCLE,
             color: topColor,
@@ -360,7 +360,7 @@ export default class Player extends CollidesWithObjects {
             shoe2LinePoint1 = this.shoe2;
             shoe2LinePoint2 = shoulder2Point;
         }
-   
+
         const leg1 = {
             type: LINE,
             shape: this.getLine(shoe1LinePoint1, !this.surface ? point : shoe1LinePoint2),
@@ -385,7 +385,7 @@ export default class Player extends CollidesWithObjects {
 
         const armPosition = this.gForce.down ? {x: this.x , y: this.y - this.bones.height / 1.25} : shoulder1Point;
         const armPosition2 = this.gForce.down ? {x: this.x , y: this.y - this.bones.height / 1.25} : shoulder2Point;
-        
+
         const arm1Line = this.getLine(armPosition, handPos1);
         const arm2Line = this.getLine(armPosition2, handPos2);
         const outer = this.isWalkingOnOuterBorder();
@@ -406,7 +406,7 @@ export default class Player extends CollidesWithObjects {
         const arm2Outline = {type: LINE, shape: arm2Line, color: 0x000, lineWidth: this.gridUnit * 1.8, order: getArmOrder(outer, 14, 8,true) };
 
         const shapes = this.isWalkingOnOuterBorder() ? unubscuredShapes : obscuredShapes;
-        if (this.gForce.none || this.getSideForAngle(bodyAngle) !== 'right' ){ 
+        if (this.gForce.none || this.getSideForAngle(bodyAngle) !== 'right' ){
             shapes.push(arm1Outline);
             shapes.push(arm1);
         }
@@ -440,7 +440,7 @@ export default class Player extends CollidesWithObjects {
             const {bounds} = concat.toVertices();
             const [first] = bounds as unknown as Point[][];
             const path = this.convertToPath(first);
-            
+
             path?.curves.length > 0 && unubscuredShapes.push({
                 type: -3,
                 shape: path,
@@ -477,11 +477,11 @@ export default class Player extends CollidesWithObjects {
            const translatedFace = facePoints.map( ([x,y]) => this.translate(x,y, 40, 40));
            const facePath = this.convertToPath(translatedFace);
            const face= {type: -3, color: this.color, shape: facePath, strokeColor: 0x000, order: 13};
-            
+
             unubscuredShapes.push(hair);
             unubscuredShapes.push(dress);
             unubscuredShapes.push(face);
-       
+
             if (!this.surface) {
                 this.setChildVisible(this.shadow as unknown as GameObject, false);
                 this.setChildLocalPosition(this.shoe1, this.gridUnit / 2, this.gridUnit / 2);
@@ -633,16 +633,16 @@ export default class Player extends CollidesWithObjects {
         const newY =  y + this.y + this.getOffset(offY) - this.bones.height * 2;
         return {x: newX, y: newY};
     }
-    
+
     private rotate(x, y, xm, ym, a) {
-        var cos = Math.cos,
+        let cos = Math.cos,
             sin = Math.sin,
-    
+
             // Subtract midpoints, so that midpoint is translated to origin
             // and add it in the end again
             xr = (x - xm) * cos(a) - (y - ym) * sin(a)   + xm,
             yr = (x - xm) * sin(a) + (y - ym) * cos(a)   + ym;
-    
+
         return { x: xr, y: yr};
     }
 
@@ -650,7 +650,7 @@ export default class Player extends CollidesWithObjects {
         const {up, down, left, right} = this.gForce;
         return down || up || left || right;
     }
-    
+
     // a function that creates a shape of 4 points from a Line of 2 points plus a thickness
     private createRotatedRect(start: Point, end: Point, thickness: number): Point[] {
         // create a Line between the two points
@@ -668,7 +668,7 @@ export default class Player extends CollidesWithObjects {
         points.push(circle.getPoint(angle + 0.25))
         points.push(circle2.getPoint(angle + 0.25))
         points.push(circle2.getPoint(angle - 0.25))
-        
+
         return points;
 
     }
@@ -690,7 +690,7 @@ export default class Player extends CollidesWithObjects {
         if (points.length === 0) {
           return 0;
         }
-      
+
         const { minX, maxX } = points.reduce(
           (acc, [x]) => ({
             minX: Math.min(acc.minX, x),
@@ -698,7 +698,7 @@ export default class Player extends CollidesWithObjects {
           }),
           { minX: points[0][0], maxX: points[0][0] }
         );
-      
+
         return maxX - minX;
       }
 }

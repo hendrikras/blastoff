@@ -10,12 +10,13 @@ class Wall extends Phaser.GameObjects.Rectangle {
   public key;
   public color: number;
   private $direction: ArcadeBodyCollision;
+    // tslint:disable-next-line:variable-name
   private _depth: number;
   constructor(scene: Scene, x: number , y: number, w: number, h: number, d, color: number, key = 'wall', direction: ArcadeBodyCollision = Collision4Direction(Direction.none)) {
        super(scene, x, y, w, h, color);
        scene.add.existing(this);
        scene.physics.add.existing(this);
-      
+
        const body = ((this as unknown as GameObjects.GameObject).body as Physics.Arcade.Body);
        body.pushable = false;
        body.onWorldBounds = true;
@@ -32,7 +33,6 @@ class Wall extends Phaser.GameObjects.Rectangle {
        this._depth = depth;
        (this as any).graphics.setDepth(this.depth);
    }
-
 
     public update() {
       const that = this as unknown as PerspectiveMixinType;

@@ -1,48 +1,37 @@
-import { Physics } from "phaser";
+import { Physics } from 'phaser';
 
-import Crate from "../gameobjects/Crate";
-import Wall from "../gameobjects/Wall";
-import { getNavMesh } from "../helpers";
-import PerspectiveObject from "../gameobjects/PerspectiveMixin";
-import CrateFace from "../gameobjects/CrateFace";
+import Crate from '../gameobjects/Crate';
+import Wall from '../gameobjects/Wall';
+import { getNavMesh } from '../helpers';
 
 import Sprite = Phaser.Physics.Arcade.Sprite;
 
-import { MenuButton } from "../ui/menu-button";
-import { BaseScene } from "./base-scene";
+import { MenuButton } from '../ui/menu-button';
+import { BaseScene } from './base-scene';
+import ArcadePhysicsCallback = Phaser.Types.Physics.Arcade.ArcadePhysicsCallback;
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
   visible: false,
-  key: "Editor",
-  physics: {}
+  key: 'Editor',
+  physics: {},
 };
 enum GameObjectType {
-  PLAYER = "player",
-  ENEMY = "enemy",
-  WALL = "wall",
-  CRATE = "crate",
-  PRISON = "prison",
-  ROCKET = "rocket",
-  LADDER = "ladder",
-  REMOVE = "remove",
-  NONE = "none"
+  PLAYER = 'player',
+  ENEMY = 'enemy',
+  WALL = 'wall',
+  CRATE = 'crate',
+  PRISON = 'prison',
+  ROCKET = 'rocket',
+  LADDER = 'ladder',
+  REMOVE = 'remove',
+  NONE = 'none',
 }
 
 export class EditorScene extends BaseScene {
   private editCrate: Crate;
   // create a private enum for game objects
   private GameObjectType: GameObjectType = GameObjectType.NONE;
-
-  private convertMeasures(crate: Sprite){
-    // convert the crates position and scale to the gridunit
-    let x = crate.x / this.gridUnit;
-    let y = crate.y / this.gridUnit;
-    let w = crate.width / this.gridUnit;
-    let h = crate.height / this.gridUnit;
-    const scale = crate.scale;
-    return { x, y, w, h, name: crate.name, scale: { x: crate.scale / this.gridUnit} };
-  }
 
   constructor() {
     super(sceneConfig);
@@ -58,14 +47,14 @@ export class EditorScene extends BaseScene {
 
     let draw = false;
 
-    this.input.on("pointerdown", function() {
+    this.input.on('pointerdown', () => {
       draw = true;
     });
 
     const { bounds: worldbounds } = this.physics.world;
     const isInBounds = (x, y) => x >= worldbounds.x && x <= worldbounds.right && y >= worldbounds.y && y <= worldbounds.bottom;
 
-    this.input.on("pointerup", pointer => {
+    this.input.on('pointerup', (pointer) => {
       draw = false;
       graphics.clear();
       const width = pointer.x - pointer.downX;
@@ -80,7 +69,7 @@ export class EditorScene extends BaseScene {
             height,
             quarterCrate * 4,
             0x43464b,
-            "cube"
+            'cube',
           ) as Wall;
           cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
           cube.drawDepth = 1;
@@ -95,14 +84,14 @@ export class EditorScene extends BaseScene {
             pointer.downY + height / 2,
             width,
             height,
-            "pipes"
+            'pipes',
           );
 
           ladder.setScale(ladderScale);
           ladder.setDepth(0);
           ladder.setInteractive();
 
-          const removeLadder = ladder.on("pointerdown", () => {
+          const removeLadder = ladder.on('pointerdown', () => {
             if (this.GameObjectType === GameObjectType.REMOVE) {
               this.ladders.remove(ladder);
               ladder.destroy();
@@ -114,7 +103,7 @@ export class EditorScene extends BaseScene {
       }
     });
 
-    this.input.on("pointermove", function(pointer) {
+    this.input.on('pointermove', (pointer) => {
       if (draw) {
         graphics.setDepth(4);
         graphics.clear();
@@ -123,31 +112,31 @@ export class EditorScene extends BaseScene {
       }
     });
 
-    new MenuButton(this, this.gridUnit, this.gridUnit * 10, "Add Crate", () => {
+    new MenuButton(this, this.gridUnit, this.gridUnit * 10, 'Add Crate', () => {
       this.GameObjectType = GameObjectType.CRATE;
     });
 
-    new MenuButton(this, this.gridUnit, this.gridUnit * 20, "Add Wall", () => {
+    new MenuButton(this, this.gridUnit, this.gridUnit * 20, 'Add Wall', () => {
       this.GameObjectType = GameObjectType.WALL;
     });
 
-    new MenuButton(this, this.gridUnit, this.gridUnit * 30, "Add Ladder", () => {
+    new MenuButton(this, this.gridUnit, this.gridUnit * 30, 'Add Ladder', () => {
       this.GameObjectType = GameObjectType.LADDER;
     });
 
-    new MenuButton(this, this.gridUnit, this.gridUnit * 40, "Remove item", () => {
+    new MenuButton(this, this.gridUnit, this.gridUnit * 40, 'Remove item', () => {
       this.GameObjectType = GameObjectType.REMOVE;
     });
 
-    new MenuButton(this, this.gridUnit, this.gridUnit * 50, "Save", () => {
+    new MenuButton(this, this.gridUnit, this.gridUnit * 50, 'Save', () => {
       const crates = this.player.getCrates();
       console.log('saving', crates);
-      this.scene.start("MainMenu", {crates})
+      this.scene.start('MainMenu', {crates});
     });
 
-    new MenuButton(this, this.gridUnit, this.gridUnit * 60, "Show", () => {
-      const crates = this.player.getCrates().map(c => this.convertMeasures(c));
-      const ladders = this.ladders.getChildren().map(l => this.convertMeasures(l as unknown as Sprite));
+    new MenuButton(this, this.gridUnit, this.gridUnit * 60, 'Show', () => {
+      const crates = this.player.getCrates().map((c) => this.convertMeasures(c));
+      const ladders = this.ladders.getChildren().map((l) => this.convertMeasures(l as unknown as Sprite));
       const level = {
         crates,
         player: this.convertMeasures(this.player as unknown as Sprite),
@@ -156,12 +145,12 @@ export class EditorScene extends BaseScene {
         rocket: this.convertMeasures(this.rocket),
         ladders,
         isLandscape: this.isLandscape,
-      }
+      };
       console.log(level);
     });
 
     this.tiles.setInteractive();
-    this.tiles.on("pointerdown", pointer => {
+    this.tiles.on('pointerdown', (pointer) => {
       switch (this.GameObjectType) {
         case GameObjectType.ROCKET:
           this.rocket.setPosition(pointer.x, pointer.y);
@@ -175,12 +164,12 @@ export class EditorScene extends BaseScene {
           this.GameObjectType = GameObjectType.NONE;
           break;
         case GameObjectType.CRATE:
-          const crate = new this.CrateType(this.scene.scene, pointer.x, pointer.y, "crates");
+          const crate = new this.CrateType(this.scene.scene, pointer.x, pointer.y, 'crates');
           crate.setScale(this.gridUnit / 10);
           crate.setDepth(3);
           crate.update();
           crate.setInteractive();
-          crate.on("pointerdown", point => {
+          crate.on('pointerdown', (point) => {
             if (this.GameObjectType === GameObjectType.REMOVE) {
               this.crates.remove(crate);
               crate.destroy();
@@ -216,14 +205,14 @@ export class EditorScene extends BaseScene {
     this.prison.setInteractive();
     this.prison.setPosition(centerX, centerY);
 
-    this.prison.on("pointerdown", pointer => {
+    this.prison.on('pointerdown', (pointer) => {
       this.GameObjectType = GameObjectType.PRISON;
       this.prison.setAlpha(0.5);
     });
 
     // this.crates.add(this.prison);
     this.rocket.setInteractive();
-    this.rocket.on("pointerdown", pointer => {
+    this.rocket.on('pointerdown', (pointer) => {
       this.GameObjectType = GameObjectType.ROCKET;
       this.rocket.setAlpha(0.5);
     });
@@ -234,13 +223,13 @@ export class EditorScene extends BaseScene {
 
     const polys = getNavMesh(this.crates, this.physics.world.bounds, quarterCrate * 1.2);
     this.enemy.setInteractive();
-    this.enemy.on("pointerdown", pointer => {
+    this.enemy.on('pointerdown', (pointer) => {
       this.GameObjectType = GameObjectType.ENEMY;
     });
     this.enemy.updateMesh(polys);
 
     this.player.setInteractive();
-    this.player.on("pointerdown", pointer => {
+    this.player.on('pointerdown', (pointer) => {
       this.GameObjectType = GameObjectType.PLAYER;
     });
 
@@ -248,12 +237,22 @@ export class EditorScene extends BaseScene {
     (this.player.body as Physics.Arcade.Body).onWorldBounds = true;
 
     this.updatePerspectiveDrawing(null);
-    this.physics.world.on("worldbounds", body => {
+    this.physics.world.on('worldbounds', (body) => {
       this.updatePerspectiveDrawing(body);
     });
   }
   public update(time) {
     this.player.update();
     this.enemy.update();
+  }
+
+  private convertMeasures(crate: Sprite) {
+    // convert the crates position and scale to the gridunit
+    const x = crate.x / this.gridUnit;
+    const y = crate.y / this.gridUnit;
+    const w = crate.width / this.gridUnit;
+    const h = crate.height / this.gridUnit;
+    const scale = crate.scale;
+    return { x, y, w, h, name: crate.name, scale: { x: crate.scale / this.gridUnit} };
   }
 }

@@ -1,70 +1,62 @@
-'use strict';
+"use strict";
 
-const path = require('path');
-const webpack = require('webpack');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
-
+const path = require("path");
+const CopyPlugin = require("copy-webpack-plugin");
+const webpack = require("webpack");
 
 module.exports = {
   entry: {
-    app: './src/main.ts',
-    vendors: ['phaser']
+    app: "./src/main.ts"
   },
-
+  output: {
+    path: path.resolve(__dirname, "dist"),
+    filename: "app.bundle.js"
+  },
   module: {
     rules: [
       {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: path.resolve(__dirname, '/node_modules')
-    }
-    ]
-  },
-  //ToDo: off for PRD
-  devtool: 'source-map',
-
-  resolve: {
-    extensions: [ '.ts', '.tsx', '.js' ]
-  },
-
-  output: {
-    filename: 'app.bundle.js',
-    path: path.resolve(__dirname, 'dist')
-  },
-
-  mode: 'development',
-
-  devServer: {
-    contentBase: path.resolve(__dirname, 'dist'),
-    https: true
-  },
-
-  plugins: [
-    new CopyWebpackPlugin([
-      {
-        from: path.resolve(__dirname, 'index.html'),
-        to: path.resolve(__dirname, 'dist')
+        test: /\.ts$/,
+        include: path.resolve(__dirname, "src"),
+        loader: "ts-loader"
       },
       {
-        from: path.resolve(__dirname, 'assets', '**', '*'),
-        to: path.resolve(__dirname, 'dist')
+        test: require.resolve("Phaser"),
+        loader: "expose-loader",
+        options: { exposes: { globalName: "Phaser", override: true } }
       }
-    ]),
-    new webpack.DefinePlugin({
-      'typeof CANVAS_RENDERER': JSON.stringify(true),
-      'typeof WEBGL_RENDERER': JSON.stringify(true)
-    }),
-  ],
-
-  optimization: {
-    splitChunks: {
-      cacheGroups: {
-        commons: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all'
-        }
-      }
+    ]
+  },
+  devServer: {
+    static: path.resolve(__dirname, "./"),
+    host: "localhost",
+    port: 8080,
+    open: false
+  },
+  resolve: {
+    extensions: [".ts", ".js"],
+    fallback: {
+      buffer: require.resolve("buffer/")
     }
-  }
+  },
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, "index.html"),
+          to: path.resolve(__dirname, "dist")
+        },
+        {
+          from: path.resolve(__dirname, "assets", "**", "*"),
+          to: path.resolve(__dirname, "dist")
+        }
+      ]
+    }),
+    new webpack.DefinePlugin({
+      "typeof CANVAS_RENDERER": JSON.stringify(true),
+      "typeof WEBGL_RENDERER": JSON.stringify(true)
+    }),
+    new webpack.ProvidePlugin({
+      Buffer: ["buffer", "Buffer"]
+    })
+  ]
 };

@@ -191,7 +191,8 @@ export default class Enemy extends CollidesWithObjects {
           this.predraw();
           const { dp, graphics, point, centerBottom, centerCenter, vanishPoint, pastCenter} = this;
           if (this.pushedCrate) {
-              if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) > this.pushedCrate.body.width) {
+              const  {width = 0} = this.pushedCrate?.body as Physics.Arcade.Body;
+              if (this.pushedCrate && point2Vec(this.pushedCrate).distance(point) > width) {
                   this.pushedCrate.enemy = null;
               }
           }

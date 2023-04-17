@@ -21,19 +21,12 @@ import {Point} from '../plugins/navmesh/src/common-types';
 import Rectangle = Phaser.Geom.Rectangle;
 import LineToLine = Phaser.Geom.Intersects.LineToLine;
 import GameObject = Phaser.GameObjects.GameObject;
+import Body = Phaser.Physics.Arcade.Body;
 
 type BodyCollision = Types.Physics.Arcade.ArcadeBodyCollision;
 export type SphereType =  PerspectiveMixinType & SphereClass;
 
 export default class CollidesWithObjects extends ContainerLite implements PerspectiveMixinType {
-    protected distanceToBoxCorner: number;
-    protected pushedCrate: Crate | null;
-    public gridUnit: number;
-    protected blockedDirection: BodyCollision = { up: false, down: false, right: false, left: false, none: true };
-    protected lastDirection: number;
-    protected head: SphereType;
-    protected gForce: BodyCollision;
-    protected onPlatform?: GameObject | boolean;
     set falling(falling: BodyCollision) {
         this.gForce = falling;
     }
@@ -46,6 +39,33 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
     set surface(platform) {
         this.onPlatform = platform;
     }
+    public gridUnit: number;
+    public vertices: Vector2[];
+    public vanishPoint: Vector2;
+    public dimensions: Vector2;
+    public point: Vector2;
+    public centerBottom: Vector2;
+    public centerCenter: Vector2;
+    public centerUp: Vector2;
+    public centerDown: Vector2;
+    public point7: Vector2;
+    public graphics: GameObjects.Graphics;
+    public draw: () => void;
+    public pastCenter: (a: string) => boolean;
+    public mp: () => void;
+    public color: number;
+    public predraw: () => void;
+    public drawVertices: (faceByDirection: Vector2[]) => void;
+    public getFaceByDirection: (direction: Direction) => Vector2[];
+    public drawInView: () => void;
+    public dp: (p: Vector2) => void;
+    protected distanceToBoxCorner: number;
+    protected pushedCrate: Crate | null;
+    protected blockedDirection: BodyCollision = { up: false, down: false, right: false, left: false, none: true };
+    protected lastDirection: number;
+    protected head: SphereType;
+    protected gForce: BodyCollision;
+    protected onPlatform?: GameObject | boolean;
 
     constructor(scene, x: number, y: number, size: number, scale: number) {
         super(scene, x, y, size, size);
@@ -54,25 +74,6 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
         this.lastDirection = Math.PI / 2;
         this.gForce = {none: true} as BodyCollision;
     }
-    vertices: Vector2[];
-    vanishPoint: Vector2;
-    dimensions: Vector2;
-    point: Vector2;
-    centerBottom: Vector2;
-    centerCenter: Vector2;
-    centerUp: Vector2;
-    centerDown: Vector2;
-    point7: Vector2;
-    graphics: GameObjects.Graphics;
-    draw: () => void;
-    pastCenter: (a: string) => boolean;
-    mp: () => void;
-    color: number;
-    predraw: () => void;
-    drawVertices: (faceByDirection: Vector2[]) => void;
-    getFaceByDirection: (direction: Direction) => Vector2[];
-    drawInView: () => void;
-    dp: (p: Vector2) => void;
     public isBlockedDirection(direction: string) {
         return this.blockedDirection[direction];
     }
@@ -95,8 +96,9 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
     }
     protected facingSide(crate: Crate): Direction {
 
-        const { point: { x, y } } = this as PerspectiveMixinType;
-        const rect = new Rectangle(x - crate.body.width / 2, y - crate.body.height / 2, crate.body.width, crate.body.height);
+        const { point: { x, y } } = this;
+        const {width, height} = crate.body as Body;
+        const rect = new Rectangle(x - width / 2, y - height / 2, width, height);
         const right = rect.getLineA();
         const top = rect.getLineB();
         const left = rect.getLineC();
@@ -105,12 +107,12 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
         const directions: Line[] = [bottom, left, top, right];
         const directionStrings: string[] = ['left', 'down', 'right', 'up'];
         const line = new Line(x, y, crate.x, crate.y);
-        const closest = directions.findIndex(dir => LineToLine(line, dir));
-      
+        const closest = directions.findIndex((dir) => LineToLine(line, dir));
+
         if (closest === -1) {
           throw new Error('No direction found');
         }
-      
+
         return Direction[directionStrings[closest]];
       }
     protected handleCrateCollison = (crate: Crate) => {
@@ -119,7 +121,7 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
         if (dir) {
             this.pushCrate(dir, crate);
         }
-   
+
     }
     protected getTrepazoid(circle1, circle2, color, percent, intersectPoint: Vector2 | null = null, strokeColor = -1) {
         const { graphics, point } = this as unknown as PerspectiveMixinType;
@@ -194,7 +196,7 @@ export default class CollidesWithObjects extends ContainerLite implements Perspe
                     points.push(points[0]);
                     graphics.strokePoints(points);
                     graphics.strokePoints(shape.getPoints());
-                    
+
                 }
             }
         });

@@ -5,7 +5,7 @@ import ContainerLitePlugin from 'phaser3-rex-plugins/plugins/containerlite-plugi
 import CustomShapesPlugin from 'phaser3-rex-plugins/plugins/customshapes-plugin.js';
 import RoundRectanglePlugin from 'phaser3-rex-plugins/plugins/roundrectangle-plugin';
 // import { PhaserNavMeshPlugin } from "phaser-navmesh";
- import  PhaserNavMeshPlugin  from './plugins/phaser-navmesh/src/phaser-navmesh-plugin';
+import PhaserNavMeshPlugin from './plugins/phaser-navmesh/src/phaser-navmesh-plugin';
 import pasuuna from '@pinkkis/phaser-plugin-pasuuna';
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -30,10 +30,10 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
       plugins: {
         scene: [
           {
-            key: "PhaserNavMeshPlugin", // Key to store the plugin class under in cache
+            key: 'PhaserNavMeshPlugin', // Key to store the plugin class under in cache
             plugin: PhaserNavMeshPlugin, // Class that constructs plugins
-            mapping: "navMeshPlugin", // Property mapping to use for the scene, e.g. this.navMeshPlugin
-            start: true
+            mapping: 'navMeshPlugin', // Property mapping to use for the scene, e.g. this.navMeshPlugin
+            start: true,
           },
         ],
         global: [

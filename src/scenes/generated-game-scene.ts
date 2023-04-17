@@ -14,6 +14,7 @@ import Vector2 = Phaser.Math.Vector2;
 import Sprite = Phaser.Physics.Arcade.Sprite;
 
 import { BaseScene } from './base-scene';
+import ArcadePhysicsCallback = Phaser.Types.Physics.Arcade.ArcadePhysicsCallback;
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
@@ -23,7 +24,7 @@ const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   },
 };
 
-export class GameScene extends BaseScene{
+export class GameScene extends BaseScene {
 
   private fallingCrates: Crate[];
   private boundedCrates: Crate[] = [];
@@ -36,12 +37,12 @@ export class GameScene extends BaseScene{
   constructor() {
     super(sceneConfig);
   }
-  public init (data){
+  public init(data) {
     this.levelData = data;
   }
   public create() {
     super.create();
-  
+
     const crateConfig = {
       classType: this.CrateType, // This is the class we created
       active: true,
@@ -52,12 +53,12 @@ export class GameScene extends BaseScene{
       key: 'crates',
     };
     // this.crates = this.physics.add.group(crateConfig);
-    
+
     // add crates with config
     const crateGroup = this.physics.add.group(crateConfig);
-    
+
     // convert crateGroup to array
-    crateGroup.getChildren().forEach(crate => this.addCrate(crate as any));
+    crateGroup.getChildren().forEach((crate) => this.addCrate(crate as any));
 
     this.crates.setDepth(3);
 
@@ -71,9 +72,9 @@ export class GameScene extends BaseScene{
       visible: true,
       repeat: 1,
       setScale: { x: ladderScale, y: ladderScale},
-      key: 'pipes'
+      key: 'pipes',
     };
-  
+
     const quarterCrate = this.quarterCrate;
 
     const {startX, startY, enemy, player} = this;
@@ -87,8 +88,10 @@ export class GameScene extends BaseScene{
           const rad = quarterCrate * 6;
           if (pos.distance(crate) <= rad || cratePos.distance(enemy as unknown as Vector2) <= rad || cratePos.distance(player) <= rad) {
             placeCrate(crate, crates);
+            return true; // return a boolean value to indicate that the iteration should continue
           }
         }
+        return null; // return null to indicate that the iteration should continue
       });
     }
 
@@ -104,7 +107,7 @@ export class GameScene extends BaseScene{
     }
 
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider as ArcadePhysicsCallback);
-   
+
     this.physics.add.overlap(this.player, this.enemy, () => this.endGame());
     const cratesCollider = this.physics.add.collider(this.enemy, this.crates);
     this.enemyCollider = this.physics.add.overlap(this.enemy, this.crates, this.enemy.cratesOverlap as ArcadePhysicsCallback);
@@ -115,17 +118,20 @@ export class GameScene extends BaseScene{
 
       placeCrate(crate as Sprite, this.crates);
       this.fallingCrates.push(crate as Crate);
+      return true;
     });
     this.ladders = this.physics.add.group(ladderConfig);
     this.ladders.setDepth(0);
     this.ladders.children.iterate((ladder, idx) => {
       const size = this.getSize(this.isLandscape);
       const obj = (ladder as Sprite);
+      const body = obj?.body || {width: 0, height: 0};
       // random number between startX and size but never less than startX
-      const x = getRandomInt(size - obj.body.width) + startX + obj.body.width / 2;
-      obj.setPosition(x, this.getSize(!this.isLandscape) - obj.body.height / 2, 0, 0);
+      const x = getRandomInt(size - body.width) + startX + body.width / 2;
+      obj.setPosition(x, this.getSize(!this.isLandscape) - body.height / 2, 0, 0);
+      return true;
     });
-    this.physics.add.overlap(this.player, this.ladders, this.player.ladderCollider);
+    this.physics.add.overlap(this.player, this.ladders, this.player.ladderCollider as ArcadePhysicsCallback);
     const polys = getNavMesh(this.crates, this.physics.world.bounds, quarterCrate * 1.2);
     this.enemy.updateMesh(polys);
   }
@@ -142,7 +148,7 @@ export class GameScene extends BaseScene{
         .text( getGameWidth(this) / 2.5, getGameHeight(this) / 2, won ? 'You Win' : 'Game Over').setFontSize(this.gridUnit * 5)
         .setDepth(5);
     this.physics.pause();
-    this.scene.start("MainMenu", {end: 'end'})
+    this.scene.start('MainMenu', {end: 'end'});
   }
   private dropEverything() {
     const blockedCrates: Crate[] = [];
@@ -192,7 +198,8 @@ export class GameScene extends BaseScene{
     this.rocket.visible = false;
     this.rocketCollider.destroy();
     this.backgoundInc = 10;
-    if (this.player.body.gameObject.bottom <= this.physics.world.bounds.bottom) {
+    const {bottom} = this.player.body?.gameObject;
+    if (bottom as number <= this.physics.world.bounds.bottom) {
       this.endGame();
     }
     this.physics.add.overlap(this.prison, this.enemy, () => {

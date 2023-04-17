@@ -1,4 +1,4 @@
-import { Scene } from "phaser";
+import { Scene } from 'phaser';
 import Vector2 = Phaser.Math.Vector2;
 
 class Path {
@@ -14,7 +14,7 @@ private scene: Scene;
   public addPoint(point: Vector2) {
     this.points.push(point);
   }
-  
+
   public getPoints(): Vector2[] {
     return this.points;
   }

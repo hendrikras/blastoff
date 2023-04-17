@@ -97,7 +97,7 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
             }
         }
 
-        if (aet.top === null) throw new Error("Encountered Unexpected Null Edge");
+        if (aet.top === null) throw new Error('Encountered Unexpected Null Edge');
 
         /* Create bundles within AET */
         let e0 = aet.top;
@@ -215,7 +215,7 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     edge.outp.above = cf;
                     break;
                 case VertexType.ERI:
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
                     if (xb !== px) {
                         cf.addRight(xb, yb);
                         px = xb;
@@ -225,13 +225,13 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     break;
                 case VertexType.ELI:
                     cf = edge.outp.below;
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
                     cf.addLeft(xb, yb);
                     px = xb;
                     break;
                 case VertexType.EMX:
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
-                    if (edge.outp.below === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
+                    if (edge.outp.below === null) throw new Error('Unexpected Null Polygon');
                     if (xb !== px) {
                         cf.addLeft(xb, yb);
                         px = xb;
@@ -240,7 +240,7 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     cf = null;
                     break;
                 case VertexType.ILI:
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
                     if (xb !== px) {
                         cf.addLeft(xb, yb);
                         px = xb;
@@ -250,14 +250,14 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     break;
                 case VertexType.IRI:
                     cf = edge.outp.below;
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
                     cf.addRight(xb, yb);
                     px = xb;
                     edge.outp.below = null;
                     break;
                 case VertexType.IMX:
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
-                    if (edge.outp.below === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
+                    if (edge.outp.below === null) throw new Error('Unexpected Null Polygon');
                     if (xb !== px) {
                         cf.addRight(xb, yb);
                         px = xb;
@@ -267,8 +267,8 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     edge.outp.below = null;
                     break;
                 case VertexType.IMM:
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
-                    if (edge.outp.below === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
+                    if (edge.outp.below === null) throw new Error('Unexpected Null Polygon');
                     if (xb !== px) {
                         cf.addRight(xb, yb);
                         px = xb;
@@ -279,8 +279,8 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     edge.outp.above = cf;
                     break;
                 case VertexType.EMM:
-                    if (cf === null) throw new Error("Unexpected Null Polygon");
-                    if (edge.outp.below === null) throw new Error("Unexpected Null Polygon");
+                    if (cf === null) throw new Error('Unexpected Null Polygon');
+                    if (edge.outp.below === null) throw new Error('Unexpected Null Polygon');
                     if (xb !== px) {
                         cf.addLeft(xb, yb);
                         px = xb;
@@ -291,7 +291,7 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     edge.outp.above = cf;
                     break;
                 case VertexType.LED:
-                    if (edge.outp.below === null) throw new Error("Unexpected Null Polygon");
+                    if (edge.outp.below === null) throw new Error('Unexpected Null Polygon');
                     if (edge.bot.y === yb) {
                         edge.outp.below.addLeft(xb, yb);
                     }
@@ -299,7 +299,7 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                     px = xb;
                     break;
                 case VertexType.RED:
-                    if (edge.outp.below === null) throw new Error("Unexpected Null Polygon");
+                    if (edge.outp.below === null) throw new Error('Unexpected Null Polygon');
                     if (edge.bot.y === yb) {
                         edge.outp.below.addRight(xb, yb);
                     }
@@ -500,21 +500,21 @@ function clip(op: OperationType, subject: Polygon, clipper: Polygon): Polygon {
                 }
             }
 
-            if (aet.top === null) throw new Error("Encountered Unexpected Null Edge");
+            if (aet.top === null) throw new Error('Encountered Unexpected Null Edge');
 
             if (prev === null) {
                 aet.top.prev = e1;
                 e1.next = aet.top;
                 aet.top = e0.next;
             } else {
-                if (prev.next === null) throw new Error("Encountered Unexpected Null Edge");
+                if (prev.next === null) throw new Error('Encountered Unexpected Null Edge');
                 prev.next.prev = e1;
                 e1.next = prev.next;
                 prev.next = e0.next;
             }
 
-            
-            if (e0.next === null) throw new Error("Encountered Unexpected Null Edge");
+
+            if (e0.next === null) throw new Error('Encountered Unexpected Null Edge');
             e0.next.prev = prev;
             e1.next.prev = e1;
             e0.next = next;
@@ -819,7 +819,7 @@ function addIntersection(
         /* Append a new node to the tail (itNode === null) or mid-list */
         return new ItNode(edge0, edge1, x, y, itNode);
     }
-    
+
     /* Head further down the list */
     itNode.next = addIntersection(itNode.next, edge0, edge1, x, y);
 
@@ -868,10 +868,10 @@ class AetTree {
             this.top = edge;
             edge.prev = null;
             edge.next = null;
-    
+
             return;
         }
-    
+
         let prevEdge: EdgeNode | null = null;
         let currentEdge = this.top;
         while (true) {
@@ -886,23 +886,23 @@ class AetTree {
                 } else {
                     prevEdge.next = edge;
                 }
-    
+
                 return;
             }
-    
+
             /* Head further into the AET */
             prevEdge = currentEdge;
             if (currentEdge.next === null) {
                 currentEdge.next = edge;
                 edge.prev = currentEdge;
                 edge.next = null;
-    
+
                 return;
             } else {
                 currentEdge = currentEdge.next;
             }
         }
-    }    
+    }
 }
 
 class EdgeTable {
@@ -1093,20 +1093,20 @@ class ScanBeamTreeEntries {
             /* Add a new tree node here */
             this.sbTree = new ScanBeamTree(y);
             this.sbtEntries++;
-    
+
             return;
         }
-    
+
         let treeNode = this.sbTree;
         while (treeNode.y !== y) {
-            const dir = treeNode.y > y ? "less" : "more";
+            const dir = treeNode.y > y ? 'less' : 'more';
             const child = treeNode[dir];
             if (child === null) {
                 treeNode[dir] = new ScanBeamTree(y);
                 this.sbtEntries++;
-    
+
                 return;
-    
+
             } else {
                 treeNode = child;
             }
@@ -1241,7 +1241,7 @@ class TopPolygonNode {
 
             const simple = new SimplePolygon(vertices);
 
-            return polyNode.proxy.hole ? new MultiPolygon([simple], true) : simple; 
+            return polyNode.proxy.hole ? new MultiPolygon([simple], true) : simple;
         });
 
         return (innerPolies.length === 1) ? innerPolies[0] : new MultiPolygon(innerPolies);
@@ -1308,11 +1308,11 @@ export abstract class Polygon {
                 const clipper = p.reduce((acc, n) => clip(OperationType.ADD, acc, n));
                 return clip(OperationType.DIF, first, clipper);
             }
-        }        
+        }
     }
 
     public difference(...p: Polygon[]): Polygon {
-        return Polygon.difference(this, ...p);        
+        return Polygon.difference(this, ...p);
     }
 
     public static fromPoints(points: ExternalVertex[]): Polygon {
@@ -1330,7 +1330,7 @@ class MultiPolygon extends Polygon {
     constructor(private polyList: Polygon[], private _isHole: boolean = false) {
         super();
         if (_isHole && polyList.length > 1) {
-            throw new Error("Complex polygons cannot be holes.");
+            throw new Error('Complex polygons cannot be holes.');
         }
     }
 
@@ -1512,7 +1512,7 @@ class SimplePolygon extends Polygon {
 
     public [isContributing](polyIndex: number): boolean {
         if (polyIndex !== 0) {
-            throw new Error("PolySimple only has one poly");
+            throw new Error('PolySimple only has one poly');
         }
 
         return this.contributes;
@@ -1520,7 +1520,7 @@ class SimplePolygon extends Polygon {
 
     public [setContributing](polyIndex: number, contributes: boolean): void {
         if (polyIndex !== 0) {
-            throw new Error("PolySimple only has one poly");
+            throw new Error('PolySimple only has one poly');
         }
 
         this.contributes = contributes;
