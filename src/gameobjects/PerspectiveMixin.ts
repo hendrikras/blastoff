@@ -4,6 +4,7 @@ import Vector2 = Phaser.Math.Vector2;
 import Wall from './Wall';
 import Graphics = Phaser.GameObjects.Graphics;
 import CollidesWithObjects from './CollidesWithObjects';
+import { RectangleHull } from '../plugins/navmesh/src/map-parsers/rectangle-hull';
 interface Ref { idx1: number; idx2: number; mp: Vector2; }
 
 export default <TBase extends Constructor>(Base: TBase) =>
@@ -108,8 +109,13 @@ class extends Base {
        delete this.vertices[9];
    }
     public drawInView() {
-        this.drawVertices(this.getYFaceInView());
-        this.drawVertices(this.getXFaceInView());
+        const {top, bottom, left, right} = ((this as unknown as CollidesWithObjects).body) as unknown as RectangleHull;
+        if((top > this.vanishPoint.y && bottom > this.vanishPoint.y )|| (top < this.vanishPoint.y && bottom < this.vanishPoint.y)){
+            this.drawVertices(this.getYFaceInView());
+        }
+        if ((left > this.vanishPoint.x && right > this.vanishPoint.x) ||( left < this.vanishPoint.x && right < this.vanishPoint.x)){
+            this.drawVertices(this.getXFaceInView());
+        }
     }
 
     public dp = (p: Vector2) => (this as unknown as PerspectiveMixinType).graphics.fillPoint(p.x, p.y, this.gridUnit / 2);

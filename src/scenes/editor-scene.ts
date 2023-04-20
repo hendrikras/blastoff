@@ -32,6 +32,7 @@ export class EditorScene extends BaseScene {
   private editCrate: Crate;
   // create a private enum for game objects
   private GameObjectType: GameObjectType = GameObjectType.NONE;
+  private buttontToggle: boolean = false;
 
   constructor() {
     super(sceneConfig);
@@ -60,7 +61,7 @@ export class EditorScene extends BaseScene {
       const width = pointer.x - pointer.downX;
       const height = pointer.y - pointer.downY;
       if (isInBounds(pointer.x, pointer.y) && isInBounds(pointer.downX, pointer.downY)) {
-        if (this.GameObjectType === GameObjectType.WALL) {
+        if (this.GameObjectType === GameObjectType.WALL && !this.buttontToggle) {
           const cube = new this.CubeType(
             this,
             pointer.downX + width / 2,
@@ -74,9 +75,9 @@ export class EditorScene extends BaseScene {
           cube.setStrokeStyle(this.gridUnit / 4, 0x000, 1);
           cube.drawDepth = 1;
           cube.update();
-          console.log(cube);
+          console.log(cube?.update);
           this.addCrate((cube as unknown) as Crate);
-        } else if (this.GameObjectType === GameObjectType.LADDER) {
+        } else if (this.GameObjectType === GameObjectType.LADDER && !this.buttontToggle) {
           const ladderScale = this.gridUnit / 10;
 
           const ladder = this.physics.scene.add.tileSprite(
@@ -117,10 +118,12 @@ export class EditorScene extends BaseScene {
     });
 
     new MenuButton(this, this.gridUnit, this.gridUnit * 20, 'Add Wall', () => {
+      this.buttontToggle = true;
       this.GameObjectType = GameObjectType.WALL;
     });
 
     new MenuButton(this, this.gridUnit, this.gridUnit * 30, 'Add Ladder', () => {
+      this.buttontToggle = true;
       this.GameObjectType = GameObjectType.LADDER;
     });
 
@@ -151,6 +154,7 @@ export class EditorScene extends BaseScene {
 
     this.tiles.setInteractive();
     this.tiles.on('pointerdown', (pointer) => {
+      this.buttontToggle = false;
       switch (this.GameObjectType) {
         case GameObjectType.ROCKET:
           this.rocket.setPosition(pointer.x, pointer.y);
@@ -180,8 +184,6 @@ export class EditorScene extends BaseScene {
           });
           this.addCrate(crate);
           break;
-        case GameObjectType.LADDER:
-          break;
         case GameObjectType.ENEMY:
           this.enemy.setPosition(pointer.x, pointer.y);
           break;
@@ -210,7 +212,6 @@ export class EditorScene extends BaseScene {
       this.prison.setAlpha(0.5);
     });
 
-    // this.crates.add(this.prison);
     this.rocket.setInteractive();
     this.rocket.on('pointerdown', (pointer) => {
       this.GameObjectType = GameObjectType.ROCKET;
@@ -220,13 +221,6 @@ export class EditorScene extends BaseScene {
     this.physics.add.overlap(this.player, this.crates, this.player.crateCollider as ArcadePhysicsCallback);
 
     this.ladders = this.physics.add.group();
-
-    const polys = getNavMesh(this.crates, this.physics.world.bounds, quarterCrate * 1.2);
-    this.enemy.setInteractive();
-    this.enemy.on('pointerdown', (pointer) => {
-      this.GameObjectType = GameObjectType.ENEMY;
-    });
-    this.enemy.updateMesh(polys);
 
     this.player.setInteractive();
     this.player.on('pointerdown', (pointer) => {
